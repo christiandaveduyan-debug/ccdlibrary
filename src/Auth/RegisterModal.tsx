@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { X, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { API_BASE_URL } from '../services/api';
 
 interface RegisterModalProps {
   onClose: () => void;
@@ -61,7 +62,7 @@ export function RegisterModal({ onClose, onSwitchToLogin, onRegister, errorMessa
     setSubmitError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/signup', {
+      const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),

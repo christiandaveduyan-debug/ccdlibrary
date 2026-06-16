@@ -4,6 +4,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { BookOpen, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { DEMO_ACCOUNTS } from '../utils/demoAccounts';
+import { API_BASE_URL } from '../services/api';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => boolean;
@@ -48,7 +49,7 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
     setSubmitError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login', {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -75,7 +76,7 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
     setSubmitError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login', {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: demoEmail, password: demoPassword }),

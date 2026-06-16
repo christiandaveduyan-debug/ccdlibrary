@@ -5,31 +5,58 @@ pub mod routes;
 pub mod security;
 
 use axum::{
-    http::Method,
+    http::{HeaderValue, Method},
     middleware::{self},
     Extension,
 };
 use dotenvy::dotenv;
-use std::env;
+use std::{collections::HashSet, env};
 
 use db::init_db_pool;
 use limiter::{enforce_concurrency, ConcurrencyLimiter};
 use routes::auth_routes::auth_routes;
-use tower_http::{cors::CorsLayer, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use tower_http::{
+    cors::{AllowOrigin, CorsLayer},
+    set_header::SetResponseHeaderLayer,
+    trace::TraceLayer,
+};
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
     dotenv().ok();
 
-    let client_origin =
-        env::var("CLIENT_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+    let mut allowed_origins = HashSet::from([
+        "http://localhost:5173".to_string(),
+        "https://ccdlib.vercel.app".to_string(),
+    ]);
+
+    if let Ok(client_url) = env::var("CLIENT_URL") {
+        allowed_origins.insert(client_url);
+    }
+
+    if let Ok(origins) = env::var("ALLOWED_ORIGINS") {
+        allowed_origins.extend(
+            origins
+                .split(',')
+                .map(str::trim)
+                .filter(|origin| !origin.is_empty())
+                .map(str::to_string),
+        );
+    }
+
+    let allowed_origins: HashSet<HeaderValue> = allowed_origins
+        .into_iter()
+        .filter_map(|origin| origin.parse::<HeaderValue>().ok())
+        .collect();
     let limiter = ConcurrencyLimiter::new(5);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = CorsLayer::new()
-        .allow_origin(client_origin.parse::<axum::http::HeaderValue>().unwrap())
+        .allow_origin(AllowOrigin::predicate(move |origin, _| {
+            allowed_origins.contains(origin)
+        }))
         .allow_methods([
             Method::GET,
             Method::POST,
