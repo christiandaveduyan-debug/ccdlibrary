@@ -8,4 +8,7 @@ RUN cargo build --release
 
 EXPOSE 8000
 
+ENV CLIENT_URL=https://ccdlib.vercel.app
+ENV ALLOWED_ORIGINS=https://ccdlib.vercel.app,http://localhost:5173
+
 CMD ["./target/release/ccdlib"]

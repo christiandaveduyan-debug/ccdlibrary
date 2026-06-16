@@ -21,7 +21,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres.fqrvivavvzhkdjkuweab:sidi_1121200@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
       PORT: 8000
-      CLIENT_URL: http://localhost:5173
+      CLIENT_URL: https://ccdlib.vercel.app
+      ALLOWED_ORIGINS: https://ccdlib.vercel.app,http://localhost:5173
     ports:
       - "8000:8000"
 
