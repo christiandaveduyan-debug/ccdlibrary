@@ -1,0 +1,3 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
+     Running `target\debug\ccdlib.exe`
+error: process didn't exit successfully: `target\debug\ccdlib.exe` (exit code: 0xffffffff)

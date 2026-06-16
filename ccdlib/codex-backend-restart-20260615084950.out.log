@@ -1,0 +1,2 @@
+Server running on http://0.0.0.0:8000
+[2m2026-06-15T00:50:37.615322Z[0m [31mERROR[0m [2mtower_http::trace::on_failure[0m[2m:[0m response failed [3mclassification[0m[2m=[0mStatus code: 500 Internal Server Error [3mlatency[0m[2m=[0m146 ms

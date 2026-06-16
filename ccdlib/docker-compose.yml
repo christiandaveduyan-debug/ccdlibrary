@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ccdlib_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ccdlib
+    ports:
+      - "5433:5432"
+    volumes:
+      - ccdlib_db_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: ccdlib_api
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres.fqrvivavvzhkdjkuweab:sidi_1121200@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
+      PORT: 8000
+      CLIENT_URL: http://localhost:5173
+    ports:
+      - "8000:8000"
+
+volumes:
+  ccdlib_db_data:

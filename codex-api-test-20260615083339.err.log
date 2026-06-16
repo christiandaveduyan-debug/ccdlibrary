@@ -1,0 +1,8 @@
+   Compiling ccdlib v0.1.0 (C:\Users\Acer\Downloads\City-College-of-Davao-Library-main\ccdlib)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.46s
+     Running `target\debug\ccdlib.exe`
+
+thread 'main' (24876) panicked at src\routes\auth_routes.rs:46:10:
+Path segments must not start with `:`. For capture groups, use `{capture}`. If you meant to literally match a segment starting with a colon, call `without_v07_checks` on the router.
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: process didn't exit successfully: `target\debug\ccdlib.exe` (exit code: 101)

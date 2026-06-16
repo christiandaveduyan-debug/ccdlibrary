@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CCD Library Frontend
 
 A modern React-based web application for the City College of Davao Library Management System.
@@ -273,3 +274,201 @@ See `package.json` for complete dependency list.
 ## License
 
 MIT License - See LICENSE file
+=======
+# CCD Library Documentation Index
+
+**Start Here:** [COMPLETION_SUMMARY.md](COMPLETION_SUMMARY.md) ⭐
+
+## 📚 Documentation Files
+
+All documentation files are in the root directory:
+
+### For Getting Started
+1. **[QUICKSTART.md](QUICKSTART.md)** ⭐⭐⭐
+   - 15-minute setup guide
+   - Step-by-step instructions
+   - Demo credentials
+   - **Start here if you want to run it fast**
+
+2. **[COMPLETION_SUMMARY.md](COMPLETION_SUMMARY.md)** ⭐⭐⭐
+   - What was completed
+   - How everything connects
+   - File structure overview
+   - Next steps
+   - **Start here to understand what you have**
+
+### For Setup & Configuration
+3. **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)**
+   - Create Supabase project
+   - Get credentials
+   - Initialize database
+   - Seed demo data
+   - Connection troubleshooting
+
+4. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)**
+   - Architecture overview
+   - Complete setup instructions
+   - Technology stack details
+   - API endpoint documentation
+   - Frontend usage examples
+   - Database schema
+   - Deployment guide
+
+### For Development
+5. **[ccdlib/README.md](ccdlib/README.md)**
+   - Backend documentation
+   - Development setup
+   - Running tests
+   - Feature list
+   - Performance info
+
+6. **[LIB/README.md](LIB/README.md)**
+   - Frontend documentation
+   - Project structure
+   - Component guide
+   - Styling system
+   - Building for production
+
+### For Problem Solving
+7. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+   - Backend issues
+   - Frontend issues
+   - Database issues
+   - System-wide troubleshooting
+   - Testing checklist
+   - **Read this if something isn't working**
+
+### For Overview & Status
+8. **[PROJECT_STATUS.md](PROJECT_STATUS.md)**
+   - Completion status checklist
+   - Technology stack
+   - Directory structure
+   - Features implemented
+   - Data flow examples
+   - Security features
+   - Deployment guide
+
+## 🗂️ Code Files Created/Modified
+
+### Backend (Rust)
+
+**New/Modified:**
+- ✅ `ccdlib/src/api/library.rs` - Added borrow/return functions
+- ✅ `ccdlib/src/routes/auth_routes.rs` - Added borrow/return routes
+- ✅ `ccdlib/.env.example` - Environment template
+- ✅ `ccdlib/README.md` - Backend documentation
+
+**Existing:**
+- `ccdlib/schema.sql` - Database schema
+- `ccdlib/Cargo.toml` - Dependencies
+- `ccdlib/src/db.rs` - Database connection
+- `ccdlib/src/engine.rs` - Server setup
+- `ccdlib/src/api/auth.rs` - Authentication handlers
+
+### Frontend (React)
+
+**New:**
+- ✅ `LIB/src/services/api.ts` - Complete API client
+- ✅ `LIB/src/hooks/useData.ts` - Data management hooks
+- ✅ `LIB/.env.local` - Environment file
+- ✅ `LIB/README.md` - Frontend documentation
+
+**Existing:**
+- `LIB/src/App.tsx` - Root component
+- `LIB/src/Auth/LoginPage.tsx` - Login page
+- `LIB/src/components/` - UI components
+- `LIB/package.json` - Dependencies
+
+## 🚀 Quick Navigation
+
+### I want to...
+
+**Get everything running fast**
+→ Read [QUICKSTART.md](QUICKSTART.md) (15 minutes)
+
+**Understand the full system**
+→ Read [COMPLETION_SUMMARY.md](COMPLETION_SUMMARY.md) then [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+
+**Set up Supabase database**
+→ Read [SUPABASE_SETUP.md](SUPABASE_SETUP.md)
+
+**Fix a problem**
+→ Read [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+**Develop/contribute to backend**
+→ Read [ccdlib/README.md](ccdlib/README.md)
+
+**Develop/contribute to frontend**
+→ Read [LIB/README.md](LIB/README.md)
+
+**Deploy to production**
+→ See INTEGRATION_GUIDE.md > Production Deployment section
+
+**See project status**
+→ Read [PROJECT_STATUS.md](PROJECT_STATUS.md)
+
+## 📋 Setup Checklist
+
+- [ ] Read COMPLETION_SUMMARY.md
+- [ ] Follow QUICKSTART.md (15 minutes)
+- [ ] Backend running: `cargo run`
+- [ ] Frontend running: `npm run dev`
+- [ ] Can login: admin@library.edu / admin123
+- [ ] Can view books page
+- [ ] Can view members page
+- [ ] Can create new book
+- [ ] Can borrow/return books
+- [ ] All features working
+
+## 🎯 Key Takeaways
+
+1. **Everything is connected**: Frontend ↔ Backend ↔ Database
+2. **Fully documented**: 8+ comprehensive guides
+3. **Production ready**: Can deploy immediately
+4. **Secure**: JWT auth, bcrypt hashing, SQL injection prevention
+5. **Complete features**: Login, CRUD, Borrow/Return, Fines
+
+## 📖 Reading Order
+
+**For Quick Setup:**
+1. COMPLETION_SUMMARY.md (5 min)
+2. QUICKSTART.md (15 min)
+3. Done! 🎉
+
+**For Full Understanding:**
+1. COMPLETION_SUMMARY.md (5 min)
+2. INTEGRATION_GUIDE.md (20 min)
+3. SUPABASE_SETUP.md (10 min)
+4. ccdlib/README.md (10 min)
+5. LIB/README.md (10 min)
+6. Ready for production! ✅
+
+**For Development:**
+1. ccdlib/README.md (backend)
+2. LIB/README.md (frontend)
+3. TROUBLESHOOTING.md (when needed)
+4. INTEGRATION_GUIDE.md (API reference)
+
+## 🆘 Help
+
+**Stuck?** Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+**Need setup help?** Check [QUICKSTART.md](QUICKSTART.md)
+
+**Want full details?** Check [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+
+**Want to understand everything?** Check [PROJECT_STATUS.md](PROJECT_STATUS.md)
+
+## ✅ You Have Everything You Need
+
+The complete CCD Library system is ready to:
+- ✅ Run locally
+- ✅ Test thoroughly
+- ✅ Understand deeply
+- ✅ Deploy to production
+- ✅ Extend and customize
+
+**Next Step**: Read [QUICKSTART.md](QUICKSTART.md)
+
+Good luck! 🚀
+>>>>>>> 632d95c (fix nested git repos)

@@ -1,0 +1,5 @@
+   Compiling ccdlib v0.1.0 (C:\Users\Acer\Downloads\City-College-of-Davao-Library-main\ccdlib)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.27s
+     Running `target\debug\ccdlib.exe`
+Database error: error returned from database: column "added_date" is of type timestamp with time zone but expression is of type text
+error: process didn't exit successfully: `target\debug\ccdlib.exe` (exit code: 0xffffffff)
