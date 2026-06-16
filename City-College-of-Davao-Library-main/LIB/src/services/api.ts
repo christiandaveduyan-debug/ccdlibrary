@@ -1,5 +1,5 @@
 // API Base URL - Update this to match your backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ccdlib.onrender.com';
 
 // Token management
 export const TokenManager = {
