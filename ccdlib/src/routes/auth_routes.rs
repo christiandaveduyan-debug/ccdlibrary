@@ -32,12 +32,22 @@ use crate::api::library::{
 };
 use crate::api::AppState;
 use axum::{
+    Json,
     routing::{get, post, put},
     Router,
 };
+use serde_json::{json, Value};
+
+async fn health_check() -> Json<Value> {
+    Json(json!({
+        "success": true,
+        "service": "ccdlib-api"
+    }))
+}
 
 pub fn auth_routes() -> Router<AppState> {
     Router::new()
+        .route("/api/health", get(health_check))
         // Auth routes
         .route("/api/login", post(login_handler))
         .route("/api/signup", post(signup_handler))
