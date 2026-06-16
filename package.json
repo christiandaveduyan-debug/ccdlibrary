@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0 --port $PORT",
+    "preview:local": "vite preview",
+    "start": "npm run preview"
   },
   "dependencies": {
     "lucide-react": "^0.490.0",
