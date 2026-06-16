@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: ccdlib-backend
+    env: rust
+    plan: free
+    buildCommand: cd ccdlib && cargo build --release
+    startCommand: cd ccdlib && ./target/release/ccdlib
+    workingDirectory: .
+    envVars:
+      - key: PORT
+        value: 8000
