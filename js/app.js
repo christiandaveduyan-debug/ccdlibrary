@@ -1,44 +1,7 @@
-const demoUsers = [
-      { email: "admin@library.edu", password: "admin123", name: "Admin User", role: "admin" },
-      { email: "librarian@library.edu", password: "lib123", name: "Jane Librarian", role: "librarian" }
-    ];
-    const USER_STORAGE_KEY = "ccdLibraryUsers";
+const demoUsers = [];
     const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ccdlib-backend.onrender.com").replace(/\/+$/, "");
     function persistUsers() {
-      try {
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUsers));
-      } catch (error) {
-        console.warn("Unable to save users.", error);
-      }
-    }
-
-    demoUsers.forEach((user, index) => {
-      user.id = user.id || `U${String(index + 1).padStart(3, "0")}`;
-      user.status = user.status || "active";
-      user.createdAt = user.createdAt || `2024-01-${String(index + 5).padStart(2, "0")}T09:00:00`;
-      user.lastLogin = user.lastLogin || "";
-    });
-    try {
-      const savedUsers = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || "[]");
-      if (Array.isArray(savedUsers)) {
-        savedUsers.forEach(savedUser => {
-          if (!savedUser || !savedUser.email) return;
-          const cleanEmail = String(savedUser.email).trim().toLowerCase();
-          const existing = demoUsers.find(user => user.email.toLowerCase() === cleanEmail || user.id === savedUser.id);
-          const normalized = {
-            ...savedUser,
-            email:cleanEmail,
-            role:["admin", "librarian"].includes(savedUser.role) ? savedUser.role : "librarian",
-            status:["active", "inactive", "pending"].includes(savedUser.status) ? savedUser.status : "pending",
-            createdAt:savedUser.createdAt || new Date().toISOString(),
-            lastLogin:savedUser.lastLogin || ""
-          };
-          if (existing) Object.assign(existing, normalized);
-          else demoUsers.push(normalized);
-        });
-      }
-    } catch (error) {
-      console.warn("Unable to load saved users.", error);
+      // Users are persisted by the backend only.
     }
 
     const pages = {
@@ -80,70 +43,16 @@ const demoUsers = [
     let currentPage = "dashboard";
     let expanded = new Set(["books"]);
     let filters = { search: "", status: "all", category: "" };
-    let borrowSelection = { memberId:"M001", bookId:"1" };
+    let borrowSelection = { memberId:"", bookId:"" };
     let accessionLookup = { number:"", bookId:null, verified:false };
-    let books = [
-      { id:"1", title:"The Great Gatsby", author:"F. Scott Fitzgerald", isbn:"978-0743273565", category:"Fiction", publisher:"Scribner", callNumber:"FIC FIT", status:"available", location:"Shelf A1", publishedYear:1925, copies:3, availableCopies:2, addedDate:"2024-01-15", barcode:"BC001" },
-      { id:"2", title:"Clean Code", author:"Robert C. Martin", isbn:"978-0132350884", category:"Technology", publisher:"Prentice Hall", callNumber:"TEC MAR", status:"borrowed", location:"Shelf B2", publishedYear:2008, copies:2, availableCopies:0, addedDate:"2024-01-20", borrower:"John Smith", borrowerId:"M001", dueDate:"2024-02-15", borrowDate:"2024-01-28", barcode:"BC002" },
-      { id:"3", title:"To Kill a Mockingbird", author:"Harper Lee", isbn:"978-0061120084", category:"Fiction", publisher:"HarperCollins", callNumber:"FIC LEE", status:"available", location:"Shelf A1", publishedYear:1960, copies:4, availableCopies:4, addedDate:"2024-01-10", barcode:"BC003" },
-      { id:"4", title:"1984", author:"George Orwell", isbn:"978-0451524935", category:"Fiction", publisher:"Signet Classic", callNumber:"FIC ORW", status:"reserved", location:"Shelf A2", publishedYear:1949, copies:2, availableCopies:1, addedDate:"2024-01-05", barcode:"BC004" },
-      { id:"5", title:"Database Systems", author:"Thomas Connolly", isbn:"978-0321215958", category:"Technology", publisher:"Addison Wesley", callNumber:"TEC CON", status:"borrowed", location:"Shelf B1", publishedYear:2014, copies:3, availableCopies:1, addedDate:"2024-01-12", borrower:"Jane Doe", borrowerId:"M002", dueDate:"2024-01-20", borrowDate:"2024-01-06", barcode:"BC005" },
-      { id:"6", title:"The Catcher in the Rye", author:"J.D. Salinger", isbn:"978-0316769488", category:"Fiction", publisher:"Little, Brown", callNumber:"FIC SAL", status:"missing", location:"Shelf A3", publishedYear:1951, copies:2, availableCopies:0, addedDate:"2024-01-08", barcode:"BC006" },
-      { id:"7", title:"Pride and Prejudice", author:"Jane Austen", isbn:"978-0141439518", category:"Romance", publisher:"Penguin", callNumber:"ROM AUS", status:"damaged", location:"Shelf C1", publishedYear:1813, copies:3, availableCopies:2, addedDate:"2024-01-18", barcode:"BC007" },
-      { id:"8", title:"The Hobbit", author:"J.R.R. Tolkien", isbn:"978-0547928227", category:"Fantasy", publisher:"Houghton Mifflin", callNumber:"FAN TOL", status:"available", location:"Shelf D1", publishedYear:1937, copies:5, availableCopies:5, addedDate:"2024-01-22", barcode:"BC008" }
-    ];
-    let members = [
-      { id:"M001", name:"John Smith", course:"BS Information Technology - 2nd Year", contact:"555-0101", status:"active", fines:0 },
-      { id:"M002", name:"Jane Doe", course:"Faculty - Computer Studies", contact:"555-0102", status:"active", fines:5.50 },
-      { id:"M003", name:"Mike Johnson", course:"Grade 12 - STEM", contact:"555-0103", status:"active", fines:0 },
-      { id:"M004", name:"Sarah Williams", course:"BS Education - 1st Year", contact:"555-0104", status:"inactive", fines:25.00 }
-    ];
-    let activities = [
-      { id:"1", type:"borrow", description:'Borrowed "Clean Code"', user:"John Smith", timestamp:"2024-01-28T10:30:00" },
-      { id:"2", type:"return", description:'Returned "The Great Gatsby"', user:"Jane Doe", timestamp:"2024-01-27T14:15:00" },
-      { id:"3", type:"reserve", description:'Reserved "1984"', user:"Mike Johnson", timestamp:"2024-01-26T09:45:00" },
-      { id:"4", type:"add", description:'Added new book "The Hobbit"', user:"Admin", timestamp:"2024-01-22T11:00:00" },
-      { id:"5", type:"fine", description:"Fine issued for overdue book", user:"Jane Doe", timestamp:"2024-01-21T16:30:00" }
-    ];
-    let notifications = [
-      { id:"1", type:"overdue", title:"Overdue Book Notice", message:"Database Systems is 8 days overdue", timestamp:"2024-01-28T08:00:00", read:false },
-      { id:"2", type:"reminder", title:"Due Date Reminder", message:"Clean Code is due in 3 days", timestamp:"2024-01-27T08:00:00", read:false },
-      { id:"3", type:"announcement", title:"Library Hours Update", message:"Library will close early on Friday", timestamp:"2024-01-25T10:00:00", read:true }
-    ];
-    let barcodeHistory = [
-      { bookId:"1", barcode:"BC001", action:"Generated", date:"2024-01-15T09:00:00", user:"Admin" },
-      { bookId:"2", barcode:"BC002", action:"Generated", date:"2024-01-20T09:00:00", user:"Admin" },
-      { bookId:"3", barcode:"BC003", action:"Generated", date:"2024-01-10T09:00:00", user:"Admin" },
-      { bookId:"4", barcode:"BC004", action:"Generated", date:"2024-01-05T09:00:00", user:"Admin" },
-      { bookId:"5", barcode:"BC005", action:"Generated", date:"2024-01-12T09:00:00", user:"Admin" },
-      { bookId:"6", barcode:"BC006", action:"Generated", date:"2024-01-08T09:00:00", user:"Admin" },
-      { bookId:"7", barcode:"BC007", action:"Generated", date:"2024-01-18T09:00:00", user:"Admin" },
-      { bookId:"8", barcode:"BC008", action:"Generated", date:"2024-01-22T09:00:00", user:"Admin" }
-    ];
-    let movementHistory = [
-      { bookId:"1", from:"Processing", to:"Shelf A1", action:"Shelved", date:"2024-01-15T10:00:00", user:"Admin" },
-      { bookId:"2", from:"Shelf B2", to:"Checked out to John Smith", action:"Borrowed", date:"2024-01-28T10:30:00", user:"John Smith" },
-      { bookId:"3", from:"Processing", to:"Shelf A1", action:"Shelved", date:"2024-01-10T10:00:00", user:"Admin" },
-      { bookId:"4", from:"Shelf A2", to:"Reservation Hold", action:"Reserved", date:"2024-01-26T09:45:00", user:"Mike Johnson" },
-      { bookId:"5", from:"Shelf B1", to:"Checked out to Jane Doe", action:"Borrowed", date:"2024-01-06T11:00:00", user:"Jane Doe" },
-      { bookId:"6", from:"Shelf A3", to:"Missing Review", action:"Marked Lost", date:"2024-01-18T13:00:00", user:"Admin" },
-      { bookId:"7", from:"Shelf C1", to:"Repair Desk", action:"Marked Damaged", date:"2024-01-20T14:00:00", user:"Admin" },
-      { bookId:"8", from:"Processing", to:"Shelf D1", action:"Shelved", date:"2024-01-22T11:00:00", user:"Admin" }
-    ];
-    let verificationRecords = [
-      { bookId:"1", physicalStatus:"available", verificationDate:"2024-02-01T09:00:00", verifiedBy:"Jane Librarian" },
-      { bookId:"2", physicalStatus:"borrowed", verificationDate:"2024-02-01T09:05:00", verifiedBy:"Jane Librarian" },
-      { bookId:"3", physicalStatus:"available", verificationDate:"2024-02-01T09:10:00", verifiedBy:"Jane Librarian" },
-      { bookId:"4", physicalStatus:"borrowed", verificationDate:"2024-02-01T09:15:00", verifiedBy:"Jane Librarian" },
-      { bookId:"5", physicalStatus:"borrowed", verificationDate:"2024-02-01T09:20:00", verifiedBy:"Jane Librarian" },
-      { bookId:"6", physicalStatus:"lost", verificationDate:"2024-02-01T09:25:00", verifiedBy:"Jane Librarian" },
-      { bookId:"7", physicalStatus:"damaged", verificationDate:"2024-02-01T09:30:00", verifiedBy:"Jane Librarian" },
-      { bookId:"8", physicalStatus:"available", verificationDate:"2024-02-01T09:35:00", verifiedBy:"Jane Librarian" }
-    ];
-    let damagedRecords = [
-      { bookId:"7", description:"Cover torn and several pages water-stained.", dateReported:"2024-01-20T14:00:00", reportedBy:"Admin", repairStatus:"For Repair", archived:false },
-      { bookId:"6", description:"Spine detached and item previously flagged for review.", dateReported:"2024-01-18T13:00:00", reportedBy:"Admin", repairStatus:"Beyond Repair", archived:false }
-    ];
+    let books = [];
+    let members = [];
+    let activities = [];
+    let notifications = [];
+    let barcodeHistory = [];
+    let movementHistory = [];
+    let verificationRecords = [];
+    let damagedRecords = [];
     let accessionHistory = [];
     let customCatalog = { author:[], publisher:[], category:[] };
     let librarySettings = {
@@ -314,6 +223,20 @@ const demoUsers = [
       };
     }
 
+    function normalizeBackendUser(user) {
+      return normalizeApiUser(user, {
+        id:user?.id ? `U${user.id}` : "",
+        email:user?.email || "",
+        name:user?.name || "",
+        createdAt:user?.created_at || user?.createdAt || new Date().toISOString(),
+        lastLogin:user?.last_login || user?.lastLogin || ""
+      });
+    }
+
+    function backendId(userId) {
+      return String(userId || "").replace(/^U/, "");
+    }
+
     function syncUser(user) {
       const existing = demoUsers.find(stored => stored.email.toLowerCase() === user.email.toLowerCase() || stored.id === user.id);
       if (existing) Object.assign(existing, user);
@@ -330,43 +253,16 @@ const demoUsers = [
       loadAppData().then(() => renderShell());
     }
 
-    function localLogin(email, password, showInvalid = true) {
-      const cleanEmail = String(email || "").trim().toLowerCase();
-      const user = demoUsers.find(u => u.email.toLowerCase() === cleanEmail && u.password === password);
-      if (!user) {
-        if (showInvalid) showLoginError("Invalid email or password. Please try again.");
-        return null;
-      }
-      if (user.status === "pending") {
-        showLoginError("Your account request is waiting for admin approval.");
-        return null;
-      }
-      if (user.status === "inactive") {
-        showLoginError("This account is inactive. Please contact the administrator.");
-        return null;
-      }
-      user.lastLogin = new Date().toISOString();
-      persistUsers();
-      return user;
-    }
-
     async function login(email, password) {
       const cleanEmail = String(email || "").trim().toLowerCase();
       showLoginError("Signing in...", "notice");
 
       try {
         const response = await apiRequest("/api/login", { email:cleanEmail, password });
-        const fallback = demoUsers.find(u => u.email.toLowerCase() === cleanEmail) || { email:cleanEmail, password };
-        // response is { token, user }
         const apiUser = response?.user || response;
         localStorage.setItem("authToken", response?.token || "");
-        completeLogin(syncUser(normalizeApiUser(apiUser, fallback)));
+        completeLogin(syncUser(normalizeApiUser(apiUser, { email:cleanEmail })));
       } catch (error) {
-        const fallbackUser = localLogin(cleanEmail, password, false);
-        if (fallbackUser) {
-          completeLogin(fallbackUser);
-          return;
-        }
         showLoginError(error.message || "Invalid email or password. Please try again.");
       }
     }
@@ -503,28 +399,7 @@ const demoUsers = [
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           if (usersData.success && usersData.data) {
-            // Merge backend users with local users
-            usersData.data.forEach(backendUser => {
-              const localUser = demoUsers.find(u => u.email.toLowerCase() === backendUser.email.toLowerCase() || u.id === `U${backendUser.id}`);
-              if (localUser) {
-                // Update local user with backend data (for pending status changes, etc.)
-                localUser.status = backendUser.status;
-                localUser.role = backendUser.role;
-              } else {
-                // Add new backend users (e.g., pending accounts created outside the app)
-                demoUsers.push({
-                  id: `U${backendUser.id}`,
-                  name: backendUser.name,
-                  email: backendUser.email.toLowerCase(),
-                  password: "", // Don't store passwords
-                  role: backendUser.role,
-                  status: backendUser.status,
-                  createdAt: new Date().toISOString(),
-                  lastLogin: ""
-                });
-              }
-            });
-            persistUsers();
+            demoUsers.splice(0, demoUsers.length, ...usersData.data.map(normalizeBackendUser));
           }
         }
       } catch (error) {
@@ -886,28 +761,7 @@ const demoUsers = [
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            // Merge backend users with local users
-            data.data.forEach(backendUser => {
-              const localUser = demoUsers.find(u => u.email.toLowerCase() === backendUser.email.toLowerCase() || u.id === `U${backendUser.id}`);
-              if (localUser) {
-                // Update local user with backend data (status, role changes)
-                localUser.status = backendUser.status;
-                localUser.role = backendUser.role;
-              } else {
-                // Add new backend users (pending accounts created outside the app)
-                demoUsers.push({
-                  id: `U${backendUser.id}`,
-                  name: backendUser.name,
-                  email: backendUser.email.toLowerCase(),
-                  password: "",
-                  role: backendUser.role,
-                  status: backendUser.status,
-                  createdAt: new Date().toISOString(),
-                  lastLogin: ""
-                });
-              }
-            });
-            persistUsers();
+            demoUsers.splice(0, demoUsers.length, ...data.data.map(normalizeBackendUser));
           }
         }
       } catch (error) {
@@ -949,7 +803,6 @@ const demoUsers = [
               <td>${fmt(user.createdAt)}</td>
               <td><div class="actions">
                 <button class="secondary" data-edit-user="${user.id}">Edit</button>
-                <button class="secondary" data-reset-user-password="${user.id}">Reset</button>
                 <button class="secondary" data-toggle-user-status="${user.id}" ${self ? "disabled" : ""}>${user.status === "active" ? "Deactivate" : user.status === "pending" ? "Approve" : "Activate"}</button>
                 <button class="icon-btn" title="Delete user" data-delete-user="${user.id}" ${self ? "disabled" : ""}>X</button>
               </div></td>
@@ -980,7 +833,7 @@ const demoUsers = [
       $("#viewModal").style.display = "flex";
     }
 
-    function saveUser(form) {
+    async function saveUser(form) {
       const data = Object.fromEntries(new FormData(form));
       const cleanEmail = String(data.email || "").trim().toLowerCase();
       const existing = data.id ? demoUsers.find(u => u.id === data.id) : null;
@@ -995,31 +848,50 @@ const demoUsers = [
           systemAlert("At least one active admin account is required.");
           return;
         }
-        existing.name = String(data.name || "").trim();
-        existing.email = cleanEmail;
-        existing.role = existing.id === currentUser.id ? currentUser.role : data.role;
-        existing.status = existing.id === currentUser.id ? "active" : data.status;
-        if (data.password) existing.password = data.password;
-        if (existing.id === currentUser.id) renderShell();
-      } else {
-        demoUsers.push({
-          id:`U${id().toUpperCase().slice(0, 6)}`,
+        const payload = {
           name:String(data.name || "").trim(),
           email:cleanEmail,
-          password:data.password,
-          role:data.role,
-          status:data.status,
-          createdAt:new Date().toISOString(),
-          lastLogin:""
+          role:existing.id === currentUser.id ? currentUser.role : data.role,
+          status:existing.id === currentUser.id ? "active" : data.status,
+          ...(data.password ? { password:data.password } : {})
+        };
+        const response = await apiPut(`/api/users/${backendId(existing.id)}`, payload);
+        if (!response?.success) {
+          systemAlert(response?.message || "Unable to save user.");
+          return;
+        }
+      } else {
+        const response = await apiRequest("/api/signup", {
+          name:String(data.name || "").trim(),
+          email:cleanEmail,
+          password:String(data.password || "")
         });
+        const created = normalizeApiUser(response?.user || response, { email:cleanEmail });
+        if (data.role !== created.role || data.status !== created.status) {
+          const update = await apiPut(`/api/users/${backendId(created.id)}`, {
+            role:data.role,
+            status:data.status
+          });
+          if (!update?.success) {
+            systemAlert(update?.message || "User was created, but role/status could not be updated.");
+            await syncUsersFromBackend();
+            renderUsers();
+            return;
+          }
+        }
       }
-      persistUsers();
       activities.unshift({ id:id(), type:"add", description:`Saved user "${data.name}"`, user:currentUser.name, timestamp:new Date().toISOString() });
+      await syncUsersFromBackend();
+      if (existing?.id === currentUser.id) {
+        const refreshed = demoUsers.find(user => user.id === currentUser.id);
+        if (refreshed) currentUser = refreshed;
+        renderShell();
+      }
       closeModal("viewModal");
       renderUsers();
     }
 
-    function toggleUserStatus(userId) {
+    async function toggleUserStatus(userId) {
       const user = demoUsers.find(u => u.id === userId);
       if (!user || user.id === currentUser.id) return;
       if (user.role === "admin" && user.status === "active" && activeAdminCount() <= 1) {
@@ -1035,35 +907,13 @@ const demoUsers = [
       } else {
         newStatus = user.status === "active" ? "inactive" : "active";
       }
-      
-      // Update locally first
-      user.status = newStatus;
-      persistUsers();
-      
-      // Update in backend via API (only if user came from backend - has UUID format)
-      // Backend user IDs are UUIDs with "U" prefix, local-only IDs have timestamp format
-      const backendUserId = user.id.replace(/^U/, "");
-      const isBackendUser = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(backendUserId);
-      
-      if (isBackendUser) {
-        apiPut(`/api/users/${backendUserId}`, { status: newStatus })
-          .then(response => {
-            if (!response?.success) {
-              systemAlert("Failed to update user status: " + (response?.message || "Unknown error"));
-              // Revert the change
-              user.status = oldStatus;
-            }
-            renderUsers();
-          })
-          .catch(error => {
-            systemAlert("Error updating user status: " + error.message);
-            // Revert the change
-            user.status = oldStatus;
-            renderUsers();
-          });
-      } else {
-        // Local-only user, no backend sync needed
+      try {
+        const response = await apiPut(`/api/users/${backendId(user.id)}`, { status:newStatus });
+        if (!response?.success) throw new Error(response?.message || "Unable to update user status.");
+        await syncUsersFromBackend();
         renderUsers();
+      } catch (error) {
+        systemAlert(error.message || `Unable to change status from ${oldStatus}.`);
       }
     }
 
@@ -1074,20 +924,15 @@ const demoUsers = [
         systemAlert("At least one active admin account is required.");
         return;
       }
-      systemConfirm(`Delete user "${user.name}"?`, () => {
-        const index = demoUsers.findIndex(u => u.id === userId);
-        if (index >= 0) demoUsers.splice(index, 1);
-        persistUsers();
+      systemConfirm(`Delete user "${user.name}"?`, async () => {
+        const response = await apiDelete(`/api/users/${backendId(user.id)}`);
+        if (!response?.success) {
+          systemAlert(response?.message || "Unable to delete user.");
+          return;
+        }
+        await syncUsersFromBackend();
         renderUsers();
       }, "Delete User");
-    }
-
-    function resetUserPassword(userId) {
-      const user = demoUsers.find(u => u.id === userId);
-      if (!user) return;
-      user.password = "password123";
-      persistUsers();
-      systemAlert(`Password reset for ${user.name}. Temporary password: password123`, "Password Reset");
     }
 
     function permissionRows() {
@@ -1186,7 +1031,6 @@ const demoUsers = [
             <div class="card-title">Password</div>
             <div class="dialog-body">
               <div class="form-grid">
-                <div><label>Current Password</label><input name="currentPassword" type="password" required></div>
                 <div><label>New Password</label><input name="newPassword" type="password" minlength="4" required></div>
                 <div><label>Confirm New Password</label><input name="confirmPassword" type="password" minlength="4" required></div>
               </div>
@@ -1226,7 +1070,7 @@ const demoUsers = [
       renderSettings();
     }
 
-    function saveProfileSettings(form) {
+    async function saveProfileSettings(form) {
       const data = Object.fromEntries(new FormData(form));
       const cleanEmail = String(data.email || "").trim().toLowerCase();
       const duplicate = demoUsers.find(user => user.email.toLowerCase() === cleanEmail && user.id !== currentUser.id);
@@ -1234,25 +1078,34 @@ const demoUsers = [
         systemAlert("Another user already uses that email address.");
         return;
       }
-      currentUser.name = String(data.name || "").trim();
-      currentUser.email = cleanEmail;
-      persistUsers();
+      const response = await apiPut(`/api/users/${backendId(currentUser.id)}`, {
+        name:String(data.name || "").trim(),
+        email:cleanEmail
+      });
+      if (!response?.success) {
+        systemAlert(response?.message || "Unable to save account settings.");
+        return;
+      }
+      await syncUsersFromBackend();
+      const refreshed = demoUsers.find(user => user.id === currentUser.id);
+      if (refreshed) currentUser = refreshed;
       renderShell();
       systemAlert("Account settings saved.");
     }
 
-    function updateCurrentPassword(form) {
+    async function updateCurrentPassword(form) {
       const data = Object.fromEntries(new FormData(form));
-      if (data.currentPassword !== currentUser.password) {
-        systemAlert("Current password is incorrect.");
-        return;
-      }
       if (data.newPassword !== data.confirmPassword) {
         systemAlert("New passwords do not match.");
         return;
       }
-      currentUser.password = data.newPassword;
-      persistUsers();
+      const response = await apiPut(`/api/users/${backendId(currentUser.id)}`, {
+        password:String(data.newPassword || "")
+      });
+      if (!response?.success) {
+        systemAlert(response?.message || "Unable to update password.");
+        return;
+      }
       form.reset();
       systemAlert("Password updated.");
     }
@@ -2624,10 +2477,6 @@ const demoUsers = [
     document.addEventListener("click", (e) => {
       const t = e.target.closest("button");
       if (!t) return;
-      if (t.dataset.login) {
-        const [email, password] = t.dataset.login.split("|");
-        login(email, password);
-      }
       if (t.id === "toggleSignup") {
         const signupForm = $("#signupForm");
         const loginForm = $("#loginForm");
@@ -2698,7 +2547,6 @@ const demoUsers = [
       if (t.dataset.editUser) openUserForm(demoUsers.find(u => u.id === t.dataset.editUser));
       if (t.dataset.toggleUserStatus) toggleUserStatus(t.dataset.toggleUserStatus);
       if (t.dataset.deleteUser) deleteUser(t.dataset.deleteUser);
-      if (t.dataset.resetUserPassword) resetUserPassword(t.dataset.resetUserPassword);
       if (t.dataset.saveLocation) {
         const book = books.find(b => b.id === t.dataset.saveLocation);
         const location = $("#newAssetLocation").value;

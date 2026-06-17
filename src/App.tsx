@@ -29,11 +29,11 @@ function App() {
             <form id="loginForm">
               <div className="field">
                 <label htmlFor="email">Email</label>
-                <input id="email" type="email" defaultValue="admin@library.edu" autoComplete="username" />
+                <input id="email" type="email" autoComplete="username" required />
               </div>
               <div className="field">
                 <label htmlFor="password">Password</label>
-                <input id="password" type="password" defaultValue="admin123" autoComplete="current-password" />
+                <input id="password" type="password" autoComplete="current-password" required />
               </div>
               <button className="primary" type="submit">
                 Sign In
@@ -59,22 +59,6 @@ function App() {
             <button id="toggleSignup" className="link-btn" type="button">
               Don't have an account? Sign up
             </button>
-            <div className="demo">
-              <div className="demo-title">DEMO ACCOUNTS</div>
-              <div className="demo-grid">
-                <button className="demo-btn admin" data-login="admin@library.edu|admin123" type="button">
-                  <span>Admin Account</span>
-                  <span>Full Access</span>
-                </button>
-                <button className="demo-btn librarian" data-login="librarian@library.edu|lib123" type="button">
-                  <span>Librarian Account</span>
-                  <span>Standard</span>
-                </button>
-              </div>
-              <p className="subtle" style={{ marginTop: 12, fontSize: 13 }}>
-                Click a demo account button to sign in immediately and explore the app.
-              </p>
-            </div>
           </div>
         </div>
       </section>

@@ -3,7 +3,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { BookOpen, Lock, User, Eye, EyeOff } from 'lucide-react';
-import { DEMO_ACCOUNTS } from '../utils/demoAccounts';
 import { API_BASE_URL } from '../services/api';
 
 interface LoginPageProps {
@@ -69,33 +68,6 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
     }
   };
 
-  const handleDemoAccountClick = async (demoEmail: string, demoPassword: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setIsLoading(true);
-    setSubmitError('');
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: demoEmail, password: demoPassword }),
-      });
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        setSubmitError(data.message || 'Login failed.');
-      } else {
-        onLogin(demoEmail, demoPassword);
-      }
-    } catch (error) {
-      setSubmitError('Unable to reach backend.');
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -141,7 +113,7 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
                     setEmail(e.target.value);
                     if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
-                  placeholder="librarian@library.com"
+                  placeholder="you@example.com"
                   className={`pl-11 h-12 border-slate-300 focus:border-sky-500 focus:ring-sky-500 ${
                     errors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : ''
                   }`}
@@ -275,28 +247,6 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
 
         {/* Footer */}
         <div className="space-y-6 mt-8">
-          {/* Demo Accounts Section */}
-          <div className="border-t border-slate-200 pt-6">
-            <p className="text-center text-slate-600 text-sm font-semibold mb-3">Demo Accounts</p>
-            <div className="grid grid-cols-2 gap-3">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleDemoAccountClick(account.email, account.password)}
-                  disabled={isLoading}
-                  className={`px-3 py-2.5 rounded-lg border transition-colors text-sm font-medium disabled:opacity-70 disabled:cursor-not-allowed ${account.color}`}
-                >
-                  <div className="font-semibold">{account.name}</div>
-                  <div className="text-xs opacity-75">{account.role}</div>
-                </button>
-              ))}
-            </div>
-            <p className="text-center text-slate-500 text-xs mt-2">
-              Click a demo account to sign in and explore the app
-            </p>
-          </div>
-
           {/* Account Creation Link */}
           <p className="text-center text-slate-500 text-sm">
             Don't have an account?{' '}
