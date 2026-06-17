@@ -3,9 +3,9 @@ services:
     name: ccdlib-backend
     env: rust
     plan: free
-    rootDir: .
-    buildCommand: cd ccdlib && cargo build --release
-    startCommand: cd ccdlib && ./target/release/ccdlib
+    rootDir: ccdlib
+    buildCommand: cargo build --release
+    startCommand: ./target/release/ccdlib
     healthCheckPath: /api/health
     envVars:
       - key: PORT
