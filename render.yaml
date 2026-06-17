@@ -3,9 +3,18 @@ services:
     name: ccdlib-backend
     env: rust
     plan: free
+    rootDir: .
     buildCommand: cd ccdlib && cargo build --release
     startCommand: cd ccdlib && ./target/release/ccdlib
-    workingDirectory: .
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 8000
+      - key: CLIENT_URL
+        value: https://ccdlib.vercel.app
+      - key: ALLOWED_ORIGINS
+        value: https://ccdlib.vercel.app,http://localhost:5173,http://localhost:3000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

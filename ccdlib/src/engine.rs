@@ -49,13 +49,26 @@ async fn main() {
         .into_iter()
         .filter_map(|origin| origin.parse::<HeaderValue>().ok())
         .collect();
+    let allow_vercel_previews = env::var("ALLOW_VERCEL_PREVIEWS")
+        .map(|value| value == "true" || value == "1")
+        .unwrap_or(false);
     let limiter = ConcurrencyLimiter::new(5);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(move |origin, _| {
-            allowed_origins.contains(origin)
+            if allowed_origins.contains(origin) {
+                return true;
+            }
+
+            allow_vercel_previews
+                && origin
+                    .to_str()
+                    .map(|origin| {
+                        origin.starts_with("https://") && origin.ends_with(".vercel.app")
+                    })
+                    .unwrap_or(false)
         }))
         .allow_methods([
             Method::GET,

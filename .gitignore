@@ -1,5 +1,10 @@
 /target
 node_modules/
 dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.env
 .env.local
+ccdlib/.env
 npm-debug.log*
