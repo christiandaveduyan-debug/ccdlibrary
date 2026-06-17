@@ -1307,15 +1307,28 @@ const demoUsers = [];
       }[type];
     }
 
+    function catalogEntryName(entry) {
+      return cleanImportValue(typeof entry === "string" ? entry : entry?.name);
+    }
+
     function catalogEntries(type) {
       const cfg = catalogConfig(type);
-      const names = new Set([
-        ...books.map(b => cleanImportValue(b[cfg.field])).filter(Boolean),
-        ...(customCatalog[type] || [])
-      ]);
-      return [...names].sort((a, b) => a.localeCompare(b)).map(name => {
+      const entriesByName = new Map();
+      books.map(b => cleanImportValue(b[cfg.field])).filter(Boolean).forEach(name => {
+        entriesByName.set(name.toLowerCase(), { name });
+      });
+      (customCatalog[type] || []).forEach(entry => {
+        const name = catalogEntryName(entry);
+        if (!name) return;
+        entriesByName.set(name.toLowerCase(), {
+          ...(typeof entry === "object" && entry ? entry : {}),
+          name
+        });
+      });
+      return [...entriesByName.values()].sort((a, b) => a.name.localeCompare(b.name)).map(entry => {
+        const name = entry.name;
         const linkedBooks = books.filter(book => cleanImportValue(book[cfg.field]).toLowerCase() === name.toLowerCase());
-        return { name, linkedBooks };
+        return { ...entry, linkedBooks };
       });
     }
 
@@ -1379,14 +1392,24 @@ const demoUsers = [];
 
       if (oldName) {
         books = books.map(book => cleanImportValue(book[cfg.field]).toLowerCase() === oldName.toLowerCase() ? { ...book, [cfg.field]:cleanNext, lastUpdated:new Date().toISOString() } : book);
-        customCatalog[type] = (customCatalog[type] || []).map(name => name.toLowerCase() === oldName.toLowerCase() ? cleanNext : name);
+        customCatalog[type] = (customCatalog[type] || []).map(entry => {
+          const name = catalogEntryName(entry);
+          if (name.toLowerCase() !== oldName.toLowerCase()) return entry;
+          return typeof entry === "object" && entry ? { ...entry, name:cleanNext } : cleanNext;
+        });
         activities.unshift({ id:id(), type:"add", description:`Renamed ${cfg.label.toLowerCase()} "${oldName}" to "${cleanNext}"`, user:currentUser.name, timestamp:new Date().toISOString() });
       } else {
-        customCatalog[type] = [...(customCatalog[type] || []), cleanNext];
+        customCatalog[type] = [...(customCatalog[type] || []), { name:cleanNext }];
         activities.unshift({ id:id(), type:"add", description:`Added ${cfg.label.toLowerCase()} "${cleanNext}"`, user:currentUser.name, timestamp:new Date().toISOString() });
       }
 
-      customCatalog[type] = [...new Set((customCatalog[type] || []).filter(Boolean))];
+      const seen = new Set();
+      customCatalog[type] = (customCatalog[type] || []).filter(entry => {
+        const key = catalogEntryName(entry).toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
       closeModal("bookModal");
       renderCatalogList(type);
     }
@@ -1415,7 +1438,7 @@ const demoUsers = [];
         return;
       }
       systemConfirm(`Delete ${cfg.label.toLowerCase()} "${name}"?`, () => {
-        customCatalog[type] = (customCatalog[type] || []).filter(item => item.toLowerCase() !== name.toLowerCase());
+        customCatalog[type] = (customCatalog[type] || []).filter(item => catalogEntryName(item).toLowerCase() !== name.toLowerCase());
         activities.unshift({ id:id(), type:"delete", description:`Deleted ${cfg.label.toLowerCase()} "${name}"`, user:currentUser.name, timestamp:new Date().toISOString() });
         renderCatalogList(type);
       }, `Delete ${cfg.label}`);
