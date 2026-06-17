@@ -45,8 +45,18 @@ async fn health_check() -> Json<Value> {
     }))
 }
 
+async fn root_check() -> Json<Value> {
+    Json(json!({
+        "success": true,
+        "service": "ccdlib-api",
+        "message": "Backend is running",
+        "health": "/api/health"
+    }))
+}
+
 pub fn auth_routes() -> Router<AppState> {
     Router::new()
+        .route("/", get(root_check))
         .route("/api/health", get(health_check))
         // Auth routes
         .route("/api/login", post(login_handler))
