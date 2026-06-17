@@ -29,6 +29,7 @@ async fn main() {
     let mut allowed_origins = HashSet::from([
         "http://localhost:5173".to_string(),
         "https://ccdlib.vercel.app".to_string(),
+        "https://ccdlibrary.vercel.app".to_string(),
     ]);
 
     if let Ok(client_url) = env::var("CLIENT_URL") {

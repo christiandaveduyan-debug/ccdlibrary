@@ -3,7 +3,7 @@ const demoUsers = [
       { email: "librarian@library.edu", password: "lib123", name: "Jane Librarian", role: "librarian" }
     ];
     const USER_STORAGE_KEY = "ccdLibraryUsers";
-    const API_BASE_URL = "https://ccdlib.onrender.com";
+    const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ccdlib-backend.onrender.com").replace(/\/+$/, "");
     function persistUsers() {
       try {
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUsers));
@@ -380,15 +380,6 @@ const demoUsers = [
         showLoginError("Please complete the signup form. Password must be at least 6 characters.");
         return;
       }
-      const duplicate = demoUsers.find(user => user.email.toLowerCase() === cleanEmail);
-      if (duplicate) {
-        const message = duplicate.status === "pending"
-          ? "This email already has a pending approval request."
-          : "An account with this email already exists.";
-        showLoginError(message);
-        return;
-      }
-
       showLoginError("Creating account...", "notice");
 
       try {
@@ -409,23 +400,6 @@ const demoUsers = [
         form.reset();
         showLoginError("Account created. You can sign in now.", "notice");
       } catch (error) {
-        if (/Unable to|Failed to fetch|NetworkError/i.test(error.message)) {
-          demoUsers.push({
-            id:`U${Date.now().toString(36).toUpperCase()}`,
-            name,
-            email:cleanEmail,
-            password,
-            role:"librarian",
-            status:"pending",
-            createdAt:new Date().toISOString(),
-            lastLogin:""
-          });
-          persistUsers();
-          addNotification("announcement", "New Account Request", `${name} requested a library system account.`);
-          form.reset();
-          showLoginError("Backend is offline, so the account request was saved locally for admin approval.", "notice");
-          return;
-        }
         showLoginError(error.message || "Unable to create account.");
       }
     }

@@ -11,9 +11,9 @@ services:
       - key: PORT
         value: 8000
       - key: CLIENT_URL
-        value: https://ccdlib.vercel.app
+        value: https://ccdlibrary.vercel.app
       - key: ALLOWED_ORIGINS
-        value: https://ccdlib.vercel.app,http://localhost:5173,http://localhost:3000
+        value: https://ccdlibrary.vercel.app,https://ccdlib.vercel.app,http://localhost:5173,http://localhost:3000
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

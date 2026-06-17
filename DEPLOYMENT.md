@@ -25,8 +25,8 @@ Required Render environment variables:
 - `DATABASE_URL`: Supabase Postgres connection string
 - `JWT_SECRET`: long random string
 - `PORT`: `8000`
-- `CLIENT_URL`: `https://ccdlib.vercel.app`
-- `ALLOWED_ORIGINS`: `https://ccdlib.vercel.app,http://localhost:5173,http://localhost:3000`
+- `CLIENT_URL`: `https://ccdlibrary.vercel.app`
+- `ALLOWED_ORIGINS`: `https://ccdlibrary.vercel.app,https://ccdlib.vercel.app,http://localhost:5173,http://localhost:3000`
 
 Optional for Vercel preview deployments:
 
