@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS books (
     publisher_id UUID REFERENCES publishers(id) ON DELETE SET NULL,
     isbn VARCHAR(50) UNIQUE,
     call_number VARCHAR(100),
-    status VARCHAR(50) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'borrowed', 'reserved', 'missing', 'damaged')),
+    status VARCHAR(50) NOT NULL DEFAULT 'available' CHECK (status IN ('unprocessed', 'available', 'borrowed', 'reserved', 'missing', 'damaged', 'replaced')),
     location VARCHAR(255),
     published_year INT,
     copies INT NOT NULL DEFAULT 1,
@@ -58,6 +58,13 @@ CREATE TABLE IF NOT EXISTS books (
 
 ALTER TABLE books
 ADD COLUMN IF NOT EXISTS accession_number VARCHAR(100) UNIQUE;
+
+ALTER TABLE books
+DROP CONSTRAINT IF EXISTS books_status_check;
+
+ALTER TABLE books
+ADD CONSTRAINT books_status_check
+CHECK (status IN ('unprocessed', 'available', 'borrowed', 'reserved', 'missing', 'damaged', 'replaced'));
 
 -- 6. MEMBERS Profiles (Extends User for members with specific attributes)
 CREATE TABLE IF NOT EXISTS members (

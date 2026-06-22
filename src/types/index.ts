@@ -6,7 +6,7 @@ export interface Book {
   category: string;
   publisher: string;
   callNumber: string;
-  status: 'available' | 'borrowed' | 'reserved' | 'missing' | 'damaged';
+  status: 'unprocessed' | 'available' | 'borrowed' | 'reserved' | 'missing' | 'damaged' | 'replaced';
   location: string;
   publishedYear: number;
   copies: number;

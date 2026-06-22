@@ -50,12 +50,17 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
   };
 
   const statusColors: Record<string, string> = {
+    unprocessed: 'bg-slate-100 text-slate-600',
     available: 'bg-emerald-100 text-emerald-700',
     borrowed: 'bg-amber-100 text-amber-700',
     reserved: 'bg-sky-100 text-sky-700',
+    replaced: 'bg-green-100 text-green-700',
     missing: 'bg-red-100 text-red-700',
     damaged: 'bg-orange-100 text-orange-700',
   };
+  const statusLabel = (status: Book['status']) => status === 'unprocessed'
+    ? 'No Status'
+    : status.charAt(0).toUpperCase() + status.slice(1);
 
   return (
     <div className="space-y-6">
@@ -90,9 +95,11 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
             className="px-4 py-2 border border-slate-300 rounded-lg text-sm bg-white"
           >
             <option value="all">All Status</option>
+            <option value="unprocessed">No Status</option>
             <option value="available">Available</option>
             <option value="borrowed">Borrowed</option>
             <option value="reserved">Reserved</option>
+            <option value="replaced">Replaced</option>
             <option value="missing">Missing</option>
             <option value="damaged">Damaged</option>
           </select>
@@ -135,7 +142,7 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
                   <td className="px-4 py-3 text-sm text-slate-600">{book.category}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[book.status]}`}>
-                      {book.status}
+                      {statusLabel(book.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
@@ -241,9 +248,11 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                   <select name="status" defaultValue={editingBook?.status || 'available'} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                    <option value="unprocessed">No Status</option>
                     <option value="available">Available</option>
                     <option value="borrowed">Borrowed</option>
                     <option value="reserved">Reserved</option>
+                    <option value="replaced">Replaced</option>
                     <option value="missing">Missing</option>
                     <option value="damaged">Damaged</option>
                   </select>
@@ -313,7 +322,7 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
                 <div>
                   <p className="text-xs text-slate-500">Status</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[viewingBook.status]}`}>
-                    {viewingBook.status}
+                    {statusLabel(viewingBook.status)}
                   </span>
                 </div>
                 <div>

@@ -173,7 +173,12 @@ const demoUsers = [];
       } while (used.has(candidate.toLowerCase()));
       return candidate;
     };
-    const statusLabel = (status) => status === "missing" ? "Lost" : status[0].toUpperCase() + status.slice(1);
+    const statusLabel = (status) => {
+      if (status === "unprocessed") return "No Status";
+      if (status === "missing") return "Lost";
+      if (status === "replaced") return "Replaced";
+      return status ? status[0].toUpperCase() + status.slice(1) : "No Status";
+    };
     const accessionStatusLabel = (status) => status === "missing" ? "Missing" : status === "replaced" ? "Replaced" : statusLabel(status);
     const inventoryStatus = (status) => status === "missing" ? "lost" : status === "reserved" ? "borrowed" : status;
     const inventoryStatusLabel = (status) => statusLabel(inventoryStatus(status));
@@ -185,6 +190,8 @@ const demoUsers = [];
       available: "background:#d1fae5;color:#047857",
       borrowed: "background:#fef3c7;color:#b45309",
       reserved: "background:#e0f2fe;color:#0369a1",
+      unprocessed: "background:#f1f5f9;color:#475569",
+      replaced: "background:#dcfce7;color:#166534",
       missing: "background:#fee2e2;color:#b91c1c",
       lost: "background:#fee2e2;color:#b91c1c",
       damaged: "background:#ffedd5;color:#c2410c"
@@ -1254,7 +1261,7 @@ const demoUsers = [];
         const categoryBooks = books.filter(b => b.category === category);
         return { category, titles:categoryBooks.length, copies:categoryBooks.reduce((sum, b) => sum + Number(b.copies || 0), 0) };
       });
-      const statusRows = ["available","borrowed","reserved","missing","damaged"].map(status => ({
+      const statusRows = ["unprocessed","available","borrowed","reserved","missing","damaged","replaced"].map(status => ({
         status,
         titles:books.filter(b => b.status === status).length,
         copies:books.filter(b => b.status === status).reduce((sum, b) => sum + Number(b.copies || 0), 0)
@@ -1294,7 +1301,7 @@ const demoUsers = [];
         <div class="card filters"><div class="filter-row">
           <input id="searchBooks" placeholder="Search by title, author, or ISBN..." value="${esc(filters.search)}">
           <select id="statusFilter">
-            ${["all","available","borrowed","reserved","missing","damaged"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : s[0].toUpperCase() + s.slice(1)}</option>`).join("")}
+            ${["all","unprocessed","available","borrowed","reserved","missing","damaged","replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
           </select>
           <select id="categoryFilter"><option value="">All Categories</option>${categories.map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
@@ -1464,7 +1471,7 @@ const demoUsers = [];
         <div class="card filters"><div class="filter-row">
           <input id="searchInventory" placeholder="Search by barcode, accession, title, author, or ISBN..." value="${esc(filters.search)}">
           <select id="inventoryStatusFilter">
-            ${["all","available","borrowed","lost","damaged"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
+            ${["all","unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
           </select>
           <select id="inventoryCategoryFilter"><option value="">All Categories</option>${categories.map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
@@ -1527,7 +1534,7 @@ const demoUsers = [];
         <div class="card filters"><div class="filter-row" style="grid-template-columns:1fr 180px 190px">
           <input id="searchAssets" placeholder="Search by barcode, title, borrower, location, or accession..." value="${esc(filters.search)}">
           <select id="assetStatusFilter">
-            ${["all","available","borrowed","lost","damaged"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
+            ${["all","unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
           </select>
           <select id="assetCategoryFilter"><option value="">All Categories</option>${[...new Set(books.map(b => b.category))].sort().map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
@@ -1564,7 +1571,7 @@ const demoUsers = [];
         <div class="card filters"><div class="filter-row" style="grid-template-columns:1fr 180px 190px">
           <input id="searchVerification" placeholder="Search by barcode, title, accession, or ISBN..." value="${esc(filters.search)}">
           <select id="verificationStatusFilter">
-            ${["all","available","borrowed","lost","damaged"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
+            ${["all","unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : statusLabel(s)}</option>`).join("")}
           </select>
           <select id="verificationCategoryFilter"><option value="">All Categories</option>${[...new Set(books.map(b => b.category))].sort().map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
@@ -1637,7 +1644,7 @@ const demoUsers = [];
 
     function renderBorrowBooks() {
       const member = memberById(borrowSelection.memberId);
-      const availableBooks = books.filter(b => b.availableCopies > 0 && !["missing","damaged"].includes(b.status));
+      const availableBooks = books.filter(b => b.availableCopies > 0 && b.status === "available");
       const selectedBook = books.find(b => b.id === borrowSelection.bookId) || availableBooks[0] || books[0];
       if (selectedBook && borrowSelection.bookId !== selectedBook.id) borrowSelection.bookId = selectedBook.id;
       const borrowedCount = books.filter(b => b.borrowerId === member.id && b.status === "borrowed").length;
@@ -1741,7 +1748,7 @@ const demoUsers = [];
             ${field("title","Title *",b.title,true)}${catalogField("author","author","Author *",b.author,true)}${field("isbn","ISBN *",b.isbn,true)}${catalogField("category","category","Category *",b.category,true)}
             ${catalogField("publisher","publisher","Publisher",b.publisher)}${field("callNumber","Call Number",b.callNumber)}${field("location","Location",b.location)}${field("publishedYear","Published Year",b.publishedYear,false,"number")}
             ${field("copies","Total Copies *",b.copies,true,"number",1)}${field("availableCopies","Available Copies *",b.availableCopies,true,"number",0)}
-            <div><label>Status</label><select name="status">${["available","borrowed","lost","damaged"].map(s => `<option value="${s}" ${(b.status === s || (b.status === "missing" && s === "lost")) ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select></div>
+            <div><label>Status</label><select name="status">${["unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${(b.status === s || (b.status === "missing" && s === "lost")) ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select></div>
             ${field("barcode","Barcode",b.barcode)}
             ${field("accessionNumber","Accession Number",accession(b))}
           </div></div>
@@ -1983,7 +1990,7 @@ const demoUsers = [];
           <div class="dialog-body">
             <p style="font-weight:800">${esc(book.title)}</p>
             <p class="subtle mono" style="margin-bottom:14px">${esc(book.barcode || "-")} | ${esc(accession(book))}</p>
-            <div class="field"><label>Current Status</label><select name="status">${["available","borrowed","lost","damaged"].map(s => `<option value="${s}" ${inventoryStatus(book.status) === s ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select></div>
+            <div class="field"><label>Current Status</label><select name="status">${["unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${inventoryStatus(book.status) === s ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select></div>
             <div class="field"><label>Current Location</label><input name="location" value="${esc(book.location || "")}"></div>
             <div class="field"><label>Borrower</label><input name="borrower" value="${esc(book.borrower || "")}"></div>
             <div class="form-grid">
@@ -2247,21 +2254,30 @@ const demoUsers = [];
       renderAccessionUpdate();
     }
 
-    function updateAccessionStatus(nextStatus) {
+    async function updateAccessionStatus(nextStatus) {
       const book = books.find(b => b.id === accessionLookup.bookId);
       if (!book) return;
       const previousStatus = accessionStatusLabel(book.status);
       const normalizedStatus = nextStatus === "missing" ? "missing" : nextStatus;
       const newStatusLabel = accessionStatusLabel(normalizedStatus);
+      const nextBook = {
+        ...book,
+        status:normalizedStatus,
+        availableCopies:["available","replaced"].includes(normalizedStatus) ? Math.max(1, book.availableCopies || 0) : 0,
+        borrower:normalizedStatus === "borrowed" ? (book.borrower || "Recorded borrower") : "",
+        borrowerId:normalizedStatus === "borrowed" ? book.borrowerId : "",
+        borrowDate:normalizedStatus === "borrowed" ? (book.borrowDate || isoDate()) : "",
+        dueDate:normalizedStatus === "borrowed" ? (book.dueDate || addDays(new Date(), librarySettings.loanDays)) : "",
+        lastUpdated:new Date().toISOString()
+      };
+      const response = await saveBookToAPI(nextBook, false);
+      if (!response.success) {
+        systemAlert(response.message || "Unable to update accession status.");
+        return;
+      }
       books = books.map(b => b.id === book.id ? {
         ...b,
-        status:normalizedStatus,
-        availableCopies:["available","replaced"].includes(normalizedStatus) ? Math.max(1, b.availableCopies || 0) : 0,
-        borrower:normalizedStatus === "borrowed" ? (b.borrower || "Recorded borrower") : "",
-        borrowerId:normalizedStatus === "borrowed" ? b.borrowerId : "",
-        borrowDate:normalizedStatus === "borrowed" ? (b.borrowDate || isoDate()) : "",
-        dueDate:normalizedStatus === "borrowed" ? (b.dueDate || addDays(new Date(), librarySettings.loanDays)) : "",
-        lastUpdated:new Date().toISOString()
+        ...nextBook
       } : b);
       accessionHistory.unshift({
         accessionNumber:accession(book),
@@ -2281,6 +2297,7 @@ const demoUsers = [];
       });
       addMovementHistory(book, previousStatus, newStatusLabel, "Accession Status Updated");
       systemAlert(`Book copy marked ${newStatusLabel}.`);
+      await loadAppData();
       renderPage();
     }
 
@@ -2289,10 +2306,11 @@ const demoUsers = [];
     }
 
     function normalizeImportStatus(status) {
-      const clean = String(status || "available").trim().toLowerCase();
+      const clean = String(status || "").trim().toLowerCase();
+      if (!clean) return "unprocessed";
       if (clean === "lost" || clean === "missing") return "missing";
-      if (["available", "borrowed", "reserved", "damaged"].includes(clean)) return clean;
-      return "available";
+      if (["available", "borrowed", "reserved", "damaged", "replaced"].includes(clean)) return clean;
+      return "unprocessed";
     }
 
     function cleanImportValue(value) {
@@ -2398,6 +2416,7 @@ const demoUsers = [];
         const parsedDate = new Date(cleanImportValue(row.dateadded || row.addeddate));
         const addedDate = Number.isNaN(parsedDate.getTime()) ? isoDate() : isoDate(parsedDate);
         const status = normalizeImportStatus(row.status);
+        const activeAvailableCopies = status === "available" ? Math.min(availableCopies, copies) : 0;
         const importedBook = {
           title,
           author: cleanImportValue(row.author),
@@ -2407,7 +2426,7 @@ const demoUsers = [];
           callNumber: cleanImportValue(row.callnumber),
           location: cleanImportValue(row.shelflocation || row.location),
           copies,
-          availableCopies: Math.min(availableCopies, copies),
+          availableCopies: activeAvailableCopies,
           status,
           addedDate,
           barcode,
