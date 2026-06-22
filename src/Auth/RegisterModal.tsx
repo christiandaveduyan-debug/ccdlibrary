@@ -252,8 +252,3 @@ export function RegisterModal({ onClose, onSwitchToLogin, onRegister, errorMessa
     </div>
   );
 }
-
-fetch('https://ccdlib.onrender.com/api/health')
-  .then(r => r.json())
-  .then(d => console.log(d))
-  .catch(e => console.error(e))

@@ -1,4 +1,4 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 use std::time::Duration;
 
@@ -6,16 +6,19 @@ use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use std::str::FromStr;
 
 pub async fn init_db_pool() -> PgPool {
-    let db_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
-        eprintln!("❌ ERROR: DATABASE_URL environment variable not set!");
-        eprintln!("\nMake sure your .env file contains:");
-        eprintln!("  DATABASE_URL=postgresql://postgres:PASSWORD@HOST:5432/postgres");
-        panic!("DATABASE_URL is required to start the application");
-    }).trim().to_string();
+    let db_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| {
+            eprintln!("❌ ERROR: DATABASE_URL environment variable not set!");
+            eprintln!("\nMake sure your .env file contains:");
+            eprintln!("  DATABASE_URL=postgresql://postgres:PASSWORD@HOST:5432/postgres");
+            panic!("DATABASE_URL is required to start the application");
+        })
+        .trim()
+        .to_string();
 
     eprintln!("\n🔗 Attempting to connect to Supabase database...");
     eprintln!("📍 Host: {}", extract_host(&db_url));
-    
+
     let mut options = match PgConnectOptions::from_str(&db_url) {
         Ok(opts) => opts,
         Err(e) => {
@@ -25,7 +28,7 @@ pub async fn init_db_pool() -> PgPool {
             panic!("Failed to parse DATABASE_URL: {}", e);
         }
     };
-    
+
     options = options.statement_cache_capacity(0);
 
     let u = db_url.to_lowercase();
@@ -52,7 +55,7 @@ pub async fn init_db_pool() -> PgPool {
             eprintln!("\n❌ DATABASE CONNECTION FAILED!");
             eprintln!("\n📋 Error Details:");
             eprintln!("   {}\n", e);
-            
+
             if e.to_string().contains("password") || e.to_string().contains("auth") {
                 eprintln!("🔐 AUTHENTICATION ERROR - Check your password:");
                 eprintln!("   1. Go to supabase.com → Your Project → Settings → Database");
@@ -65,14 +68,15 @@ pub async fn init_db_pool() -> PgPool {
                 eprintln!("   1. Supabase project is active (not paused)");
                 eprintln!("   2. Your network allows port 5432 or 6543");
                 eprintln!("   3. The hostname is correct\n");
-            } else if e.to_string().contains("relation") || e.to_string().contains("does not exist") {
+            } else if e.to_string().contains("relation") || e.to_string().contains("does not exist")
+            {
                 eprintln!("📊 SCHEMA ERROR - Database tables not found:");
                 eprintln!("   1. Go to Supabase SQL Editor");
                 eprintln!("   2. Create New Query");
                 eprintln!("   3. Copy & paste entire schema.sql file");
                 eprintln!("   4. Click Run\n");
             }
-            
+
             panic!("Database connection failed: {}", e);
         }
     }

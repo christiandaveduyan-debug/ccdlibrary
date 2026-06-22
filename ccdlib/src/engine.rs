@@ -66,9 +66,7 @@ async fn main() {
             allow_vercel_previews
                 && origin
                     .to_str()
-                    .map(|origin| {
-                        origin.starts_with("https://") && origin.ends_with(".vercel.app")
-                    })
+                    .map(|origin| origin.starts_with("https://") && origin.ends_with(".vercel.app"))
                     .unwrap_or(false)
         }))
         .allow_methods([

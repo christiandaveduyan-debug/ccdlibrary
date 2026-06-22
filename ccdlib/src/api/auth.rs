@@ -360,7 +360,11 @@ pub async fn update_user(
         }
     }
 
-    let password_hash = match payload.password.as_deref().filter(|password| !password.is_empty()) {
+    let password_hash = match payload
+        .password
+        .as_deref()
+        .filter(|password| !password.is_empty())
+    {
         Some(password) if password.len() < 6 => {
             return (
                 StatusCode::BAD_REQUEST,
@@ -388,7 +392,10 @@ pub async fn update_user(
         None => None,
     };
 
-    let email = payload.email.as_ref().map(|email| email.trim().to_lowercase());
+    let email = payload
+        .email
+        .as_ref()
+        .map(|email| email.trim().to_lowercase());
     let name = payload.name.as_ref().map(|name| name.trim().to_string());
 
     let result = sqlx::query(

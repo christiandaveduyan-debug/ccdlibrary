@@ -163,6 +163,16 @@ const demoUsers = [];
     const barcodeDate = (book) => book.barcodeDateGenerated || `${book.addedDate}T09:00:00`;
     const lastUpdated = (book) => book.lastUpdated || book.borrowDate || book.addedDate;
     const nextBarcode = () => `BC${String(books.length + barcodeHistory.length + 1).padStart(3, "0")}`;
+    const nextAccessionNumber = () => {
+      const used = new Set(books.map(book => String(book.accessionNumber || "").toLowerCase()).filter(Boolean));
+      let number = books.length + 1;
+      let candidate = "";
+      do {
+        candidate = `ACC-${String(number).padStart(4, "0")}`;
+        number += 1;
+      } while (used.has(candidate.toLowerCase()));
+      return candidate;
+    };
     const statusLabel = (status) => status === "missing" ? "Lost" : status[0].toUpperCase() + status.slice(1);
     const accessionStatusLabel = (status) => status === "missing" ? "Missing" : status === "replaced" ? "Replaced" : statusLabel(status);
     const inventoryStatus = (status) => status === "missing" ? "lost" : status === "reserved" ? "borrowed" : status;
@@ -331,6 +341,7 @@ const demoUsers = [];
               copies: b.copies,
               availableCopies: b.available_copies,
               addedDate: b.added_date,
+              accessionNumber: b.accession_number || "",
               barcode: b.barcode || ""
             }));
           }
@@ -474,20 +485,22 @@ const demoUsers = [];
       book.authorId = await ensureCatalogEntry("author", book.author);
       book.categoryId = await ensureCatalogEntry("category", book.category);
       book.publisherId = await ensureCatalogEntry("publisher", book.publisher);
+      const optionalText = (value) => cleanImportValue(value) || null;
 
       const payload = {
         title: book.title,
         author_id: book.authorId,
         category_id: book.categoryId,
         publisher_id: book.publisherId,
-        isbn: book.isbn,
-        call_number: book.callNumber,
+        isbn: optionalText(book.isbn),
+        call_number: optionalText(book.callNumber),
         status: book.status === "lost" ? "missing" : book.status,
-        location: book.location,
+        location: optionalText(book.location),
         published_year: Number(book.publishedYear) || 0,
         copies: Number(book.copies) || 1,
         available_copies: Number(book.availableCopies) || 1,
-        barcode: book.barcode
+        accession_number: optionalText(book.accessionNumber || accession(book)),
+        barcode: optionalText(book.barcode)
       };
 
       if (isNew) {
@@ -1760,7 +1773,7 @@ const demoUsers = [];
           else {
             next.id = response.data || id();
             next.addedDate = new Date().toISOString().slice(0,10);
-            next.accessionNumber = next.accessionNumber || `ACC-${String(books.length + 1).padStart(4, "0")}`;
+            next.accessionNumber = next.accessionNumber || nextAccessionNumber();
             books.push(next);
             activities.unshift({ id:id(), type:"add", description:`Added new book "${next.title}"`, user:currentUser.name, timestamp:new Date().toISOString() });
           }
@@ -2368,17 +2381,17 @@ const demoUsers = [];
       return tableRowsToObjects(parseCsvRows(text));
     }
 
-    function importInventoryRows(rows) {
+    async function importInventoryRows(rows) {
       let added = 0;
       let updated = 0;
       const now = new Date().toISOString();
 
-      rows.forEach(row => {
+      for (const row of rows) {
         const title = cleanImportValue(row.booktitle || row.title);
-        if (!title) return;
+        if (!title) continue;
 
         const barcode = cleanImportValue(row.barcode);
-        const accessionNumber = cleanImportValue(row.accessionnumber || row.accession);
+        const accessionNumber = cleanImportValue(row.accessionnumber || row.accession) || nextAccessionNumber();
         const isbn = cleanImportValue(row.isbn);
         const copies = Math.max(1, Number(row.quantity || row.copies || 1) || 1);
         const availableCopies = Math.max(0, Number(row.availablecopies || row.available || copies) || 0);
@@ -2410,17 +2423,24 @@ const demoUsers = [];
         );
 
         if (existingIndex >= 0) {
-          books[existingIndex] = { ...books[existingIndex], ...importedBook };
+          const nextBook = { ...books[existingIndex], ...importedBook };
+          const response = await saveBookToAPI(nextBook, false);
+          if (!response.success) throw new Error(response.message || `Unable to update "${title}".`);
+          books[existingIndex] = nextBook;
           updated += 1;
         } else {
-          books.push({
+          const nextBook = {
             id: id(),
             ...importedBook,
-            accessionNumber: accessionNumber || `ACC-${String(books.length + 1).padStart(4, "0")}`
-          });
+            accessionNumber
+          };
+          const response = await saveBookToAPI(nextBook, true);
+          if (!response.success) throw new Error(response.message || `Unable to import "${title}".`);
+          nextBook.id = response.data || nextBook.id;
+          books.push(nextBook);
           added += 1;
         }
-      });
+      }
 
       if (added || updated) {
         activities.unshift({
@@ -2439,7 +2459,7 @@ const demoUsers = [];
       if (!file) return;
       const isWorkbook = /\.(xlsx|xls)$/i.test(file.name) && !/\.csv$/i.test(file.name);
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           let rows = [];
           if (isWorkbook && window.XLSX) {
@@ -2453,7 +2473,8 @@ const demoUsers = [];
             rows = parseInventoryImport(String(reader.result || ""), file.name);
           }
           if (!rows.length) throw new Error("No inventory rows were found in this file.");
-          const result = importInventoryRows(rows);
+          const result = await importInventoryRows(rows);
+          await loadAppData();
           systemAlert(`Inventory import complete. ${result.added} added, ${result.updated} updated.`);
           renderInventory();
         } catch (error) {

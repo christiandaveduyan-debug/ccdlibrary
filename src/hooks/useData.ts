@@ -16,6 +16,7 @@ export interface Book {
   copies: number;
   available_copies: number;
   added_date: string;
+  accession_number?: string;
   barcode?: string;
 }
 

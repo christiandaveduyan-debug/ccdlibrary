@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use bcrypt::{hash, DEFAULT_COST};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -29,6 +30,7 @@ pub struct BookResponse {
     pub copies: i32,
     pub available_copies: i32,
     pub added_date: String,
+    pub accession_number: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -80,6 +82,7 @@ pub struct CreateBookRequest {
     pub published_year: Option<i32>,
     pub copies: Option<i32>,
     pub available_copies: Option<i32>,
+    pub accession_number: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -96,6 +99,7 @@ pub struct UpdateBookRequest {
     pub published_year: Option<i32>,
     pub copies: Option<i32>,
     pub available_copies: Option<i32>,
+    pub accession_number: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -105,6 +109,7 @@ pub struct CreateMemberRequest {
     pub email: String,
     pub phone: Option<String>,
     pub member_type: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -167,7 +172,7 @@ pub struct ApiResponse<T> {
 // GET all books
 pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query(
-        "SELECT b.id::text, b.title, b.author_id::text, a.name AS author, b.category_id::text, c.name AS category, b.publisher_id::text, p.name AS publisher, b.isbn, b.call_number, b.status, b.location, b.published_year, b.copies, b.available_copies, b.added_date::text, b.barcode
+        "SELECT b.id::text, b.title, b.author_id::text, a.name AS author, b.category_id::text, c.name AS category, b.publisher_id::text, p.name AS publisher, b.isbn, b.call_number, b.status, b.location, b.published_year, b.copies, b.available_copies, b.added_date::text, b.accession_number, b.barcode
          FROM books b
          LEFT JOIN authors a ON b.author_id = a.id
          LEFT JOIN categories c ON b.category_id = c.id
@@ -197,6 +202,7 @@ pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
                     copies: row.get("copies"),
                     available_copies: row.get("available_copies"),
                     added_date: row.try_get("added_date").unwrap_or_default(),
+                    accession_number: row.try_get("accession_number").ok(),
                     barcode: row.try_get("barcode").ok(),
                 })
                 .collect();
@@ -398,8 +404,8 @@ pub async fn add_book(
     let book_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query(
-        "INSERT INTO books (id, title, author_id, category_id, publisher_id, isbn, call_number, status, location, published_year, copies, available_copies, barcode) 
-         VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13)"
+        "INSERT INTO books (id, title, author_id, category_id, publisher_id, isbn, call_number, status, location, published_year, copies, available_copies, accession_number, barcode) 
+         VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
     )
     .bind(book_id.clone())
     .bind(&payload.title)
@@ -413,6 +419,7 @@ pub async fn add_book(
     .bind(payload.published_year)
     .bind(payload.copies.unwrap_or(1))
     .bind(payload.available_copies.unwrap_or(1))
+    .bind(&payload.accession_number)
     .bind(&payload.barcode)
     .execute(&state.db)
     .await;
@@ -459,7 +466,8 @@ pub async fn update_book(
             published_year = COALESCE($10, published_year),
             copies = COALESCE($11, copies),
             available_copies = COALESCE($12, available_copies),
-            barcode = COALESCE($13, barcode)
+            accession_number = COALESCE($13, accession_number),
+            barcode = COALESCE($14, barcode)
          WHERE id::text = $1",
     )
     .bind(&book_id)
@@ -474,6 +482,7 @@ pub async fn update_book(
     .bind(payload.published_year)
     .bind(payload.copies)
     .bind(payload.available_copies)
+    .bind(&payload.accession_number)
     .bind(&payload.barcode)
     .execute(&state.db)
     .await;
@@ -966,22 +975,116 @@ pub async fn delete_publisher(
     }
 }
 
-// POST - Create member (note: requires user account first)
+// POST - Create member
 pub async fn add_member(
     State(state): State<AppState>,
     Json(payload): Json<CreateMemberRequest>,
 ) -> impl IntoResponse {
     let member_id = Uuid::new_v4().to_string();
     let now = Local::now().format("%Y-%m-%d").to_string();
+    let name = payload.name.trim();
+    let email = payload.email.trim().to_lowercase();
+    let member_type = payload
+        .member_type
+        .as_deref()
+        .unwrap_or("student")
+        .trim()
+        .to_lowercase();
 
-    let result = sqlx::query(
-        "INSERT INTO members (id, phone, type, joined_date) VALUES ($1::uuid, $2, $3, $4)",
-    )
-    .bind(member_id.clone())
-    .bind(&payload.phone)
-    .bind(&payload.member_type)
-    .bind(&now)
-    .execute(&state.db)
+    if name.len() < 2 || !email.contains('@') {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<String> {
+                success: false,
+                message: "Please provide a valid member name and email".to_string(),
+                data: None,
+            }),
+        );
+    }
+
+    if !["student", "faculty", "staff"].contains(&member_type.as_str()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<String> {
+                success: false,
+                message: "Invalid member type".to_string(),
+                data: None,
+            }),
+        );
+    }
+
+    let raw_password = payload
+        .password
+        .as_deref()
+        .filter(|password| !password.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
+
+    if raw_password.len() < 6 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<String> {
+                success: false,
+                message: "Password must be at least 6 characters".to_string(),
+                data: None,
+            }),
+        );
+    }
+
+    let password_hash = match hash(raw_password, DEFAULT_COST) {
+        Ok(hash) => hash,
+        Err(err) => {
+            eprintln!("Hashing error: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<String> {
+                    success: false,
+                    message: "Failed to create member".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
+    let mut tx = match state.db.begin().await {
+        Ok(tx) => tx,
+        Err(err) => {
+            eprintln!("Database transaction error: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<String> {
+                    success: false,
+                    message: "Failed to create member".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
+    let result = async {
+        sqlx::query(
+            "INSERT INTO users (id, name, email, password_hash, role, status)
+             VALUES ($1::uuid, $2, $3, $4, 'member', 'active')",
+        )
+        .bind(member_id.clone())
+        .bind(name)
+        .bind(&email)
+        .bind(&password_hash)
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query(
+            "INSERT INTO members (id, phone, type, joined_date) VALUES ($1::uuid, $2, $3, $4)",
+        )
+        .bind(member_id.clone())
+        .bind(&payload.phone)
+        .bind(&member_type)
+        .bind(&now)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await
+    }
     .await;
 
     match result {
@@ -995,6 +1098,22 @@ pub async fn add_member(
         ),
         Err(err) => {
             eprintln!("Database error: {}", err);
+            if err
+                .as_database_error()
+                .and_then(|db_err| db_err.code())
+                .as_deref()
+                == Some("23505")
+            {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(ApiResponse::<String> {
+                        success: false,
+                        message: "A member or user with this email already exists".to_string(),
+                        data: None,
+                    }),
+                );
+            }
+
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::<String> {

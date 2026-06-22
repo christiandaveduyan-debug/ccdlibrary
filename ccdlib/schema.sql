@@ -52,8 +52,12 @@ CREATE TABLE IF NOT EXISTS books (
     copies INT NOT NULL DEFAULT 1,
     available_copies INT NOT NULL DEFAULT 1,
     added_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    accession_number VARCHAR(100) UNIQUE,
     barcode VARCHAR(100) UNIQUE
 );
+
+ALTER TABLE books
+ADD COLUMN IF NOT EXISTS accession_number VARCHAR(100) UNIQUE;
 
 -- 6. MEMBERS Profiles (Extends User for members with specific attributes)
 CREATE TABLE IF NOT EXISTS members (
