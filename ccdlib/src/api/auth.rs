@@ -30,6 +30,8 @@ pub struct UserData {
     pub email: String,
     pub role: String,
     pub status: String,
+    pub created_at: Option<String>,
+    pub last_login: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -66,7 +68,7 @@ pub async fn login_handler(
     let email = payload.email.trim().to_lowercase();
 
     let query_result = sqlx::query(
-        "SELECT id::text as id, name, email, password_hash, role, status FROM users WHERE LOWER(email) = $1"
+        "SELECT id::text as id, name, email, password_hash, role, status, created_at::text AS created_at, last_login::text AS last_login FROM users WHERE LOWER(email) = $1"
     )
     .bind(&email)
     .fetch_optional(&state.db)
@@ -123,6 +125,14 @@ pub async fn login_handler(
             let user_id: String = row.get("id");
             let user_email: String = row.get("email");
             let user_role: String = row.get("role");
+            let login_time = sqlx::query_scalar::<_, Option<String>>(
+                "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id::text = $1 RETURNING last_login::text AS last_login",
+            )
+            .bind(&user_id)
+            .fetch_one(&state.db)
+            .await
+            .ok()
+            .flatten();
 
             // Create JWT claims (24 hour expiration)
             let claims = Claims::new(user_id.clone(), user_email.clone(), user_role.clone(), 24);
@@ -149,6 +159,8 @@ pub async fn login_handler(
                 email: user_email,
                 role: user_role,
                 status,
+                created_at: row.try_get("created_at").ok(),
+                last_login: login_time.or_else(|| row.try_get("last_login").ok()),
             };
 
             let response = TokenResponse {
@@ -244,7 +256,7 @@ pub async fn signup_handler(
 
     // Insert user into database as pending. Admin approval activates the account.
     let insert_result = sqlx::query(
-        "INSERT INTO users (name, email, password_hash, role, status) VALUES ($1, $2, $3, 'librarian', 'pending') RETURNING id::text as id, name, email, role, status"
+        "INSERT INTO users (name, email, password_hash, role, status) VALUES ($1, $2, $3, 'librarian', 'pending') RETURNING id::text as id, name, email, role, status, created_at::text AS created_at, last_login::text AS last_login"
     )
     .bind(name)
     .bind(&email)
@@ -260,6 +272,8 @@ pub async fn signup_handler(
                 email: row.get("email"),
                 role: row.get("role"),
                 status: row.get("status"),
+                created_at: row.try_get("created_at").ok(),
+                last_login: row.try_get("last_login").ok(),
             };
 
             (
@@ -288,7 +302,7 @@ pub async fn signup_handler(
 
 pub async fn get_users(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query(
-        "SELECT id::text as id, name, email, role, status FROM users ORDER BY created_at DESC",
+        "SELECT id::text as id, name, email, role, status, created_at::text AS created_at, last_login::text AS last_login FROM users ORDER BY created_at DESC",
     )
     .fetch_all(&state.db)
     .await;
@@ -303,6 +317,8 @@ pub async fn get_users(State(state): State<AppState>) -> impl IntoResponse {
                     email: row.get("email"),
                     role: row.get("role"),
                     status: row.get("status"),
+                    created_at: row.try_get("created_at").ok(),
+                    last_login: row.try_get("last_login").ok(),
                 })
                 .collect();
 
@@ -406,7 +422,7 @@ pub async fn update_user(
             status = COALESCE($5, status),
             password_hash = COALESCE($6, password_hash)
          WHERE id::text = $1
-         RETURNING id::text as id, name, email, role, status",
+         RETURNING id::text as id, name, email, role, status, created_at::text AS created_at, last_login::text AS last_login",
     )
     .bind(&user_id)
     .bind(name)
@@ -425,6 +441,8 @@ pub async fn update_user(
                 email: row.get("email"),
                 role: row.get("role"),
                 status: row.get("status"),
+                created_at: row.try_get("created_at").ok(),
+                last_login: row.try_get("last_login").ok(),
             };
 
             (

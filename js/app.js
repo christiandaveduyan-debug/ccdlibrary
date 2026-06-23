@@ -231,8 +231,8 @@ const demoUsers = [];
 
     function normalizeApiUser(user, fallback = {}) {
       const cleanEmail = String(user?.email || fallback.email || "").trim().toLowerCase();
-      const role = ["admin", "librarian"].includes(user?.role) ? user.role : "librarian";
-      const status = ["active", "inactive", "pending"].includes(user?.status) ? user.status : "active";
+      const role = ["admin", "librarian", "member"].includes(user?.role) ? user.role : "librarian";
+      const status = ["active", "inactive", "suspended", "pending"].includes(user?.status) ? user.status : "active";
 
       return {
         id:user?.id ? `U${user.id}` : fallback.id || `U${Date.now().toString(36).toUpperCase()}`,
@@ -241,8 +241,8 @@ const demoUsers = [];
         password:fallback.password || "",
         role,
         status,
-        createdAt:fallback.createdAt || new Date().toISOString(),
-        lastLogin:new Date().toISOString()
+        createdAt:user?.created_at || user?.createdAt || fallback.createdAt || "",
+        lastLogin:user?.last_login || user?.lastLogin || fallback.lastLogin || ""
       };
     }
 
@@ -251,7 +251,7 @@ const demoUsers = [];
         id:user?.id ? `U${user.id}` : "",
         email:user?.email || "",
         name:user?.name || "",
-        createdAt:user?.created_at || user?.createdAt || new Date().toISOString(),
+        createdAt:user?.created_at || user?.createdAt || "",
         lastLogin:user?.last_login || user?.lastLogin || ""
       });
     }
@@ -832,7 +832,7 @@ const demoUsers = [];
               <td><span class="badge ${roleBadgeClass(user.role)}">${esc(roleLabel(user.role))}</span></td>
               <td><span class="pill" style="${userStatusStyle(user.status)}">${esc(user.status === "pending" ? "Pending Approval" : roleLabel(user.status))}</span></td>
               <td>${user.lastLogin ? fmtDateTime(user.lastLogin) : "-"}</td>
-              <td>${fmt(user.createdAt)}</td>
+              <td>${user.createdAt ? fmt(user.createdAt) : "-"}</td>
               <td><div class="actions">
                 <button class="secondary" data-edit-user="${user.id}">Edit</button>
                 <button class="secondary" data-toggle-user-status="${user.id}" ${self ? "disabled" : ""}>${user.status === "active" ? "Deactivate" : user.status === "pending" ? "Approve" : "Activate"}</button>
