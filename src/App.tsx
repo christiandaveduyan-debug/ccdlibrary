@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
-import { LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Eye, EyeOff, LogOut } from 'lucide-react';
 import logo from '../CCDLOGO-clean.png';
 
 function App() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+
   useEffect(() => {
     import('../js/app.js').catch((error) => {
       console.error('Failed to load legacy app script:', error);
@@ -33,7 +36,18 @@ function App() {
               </div>
               <div className="field">
                 <label htmlFor="password">Password</label>
-                <input id="password" type="password" autoComplete="current-password" required />
+                <div className="password-field">
+                  <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required />
+                  <button
+                    className="password-toggle"
+                    type="button"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
+                    {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                  </button>
+                </div>
               </div>
               <button className="primary" type="submit">
                 Sign In
@@ -50,7 +64,18 @@ function App() {
               </div>
               <div className="field">
                 <label htmlFor="signupPassword">Password</label>
-                <input id="signupPassword" name="password" type="password" autoComplete="new-password" minLength={6} required />
+                <div className="password-field">
+                  <input id="signupPassword" name="password" type={showSignupPassword ? 'text' : 'password'} autoComplete="new-password" minLength={6} required />
+                  <button
+                    className="password-toggle"
+                    type="button"
+                    aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                    title={showSignupPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowSignupPassword((visible) => !visible)}
+                  >
+                    {showSignupPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                  </button>
+                </div>
               </div>
               <button className="primary" type="submit">
                 Request Account

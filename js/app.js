@@ -151,6 +151,8 @@ const demoUsers = [];
         edit: `<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`,
         info: `<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>`,
         help: `<circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 1 1 5.8 1c-.8 1.4-2.9 1.6-2.9 3"></path><path d="M12 17h.01"></path>`,
+        eye: `<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle>`,
+        "eye-off": `<path d="m3 3 18 18"></path><path d="M10.6 10.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-1.2"></path><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.2 3.2"></path><path d="M6.6 6.6C3.6 8.6 2 12 2 12s3.5 7 10 7a10.7 10.7 0 0 0 5.4-1.5"></path>`,
         file: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path>`,
         damaged: `<path d="m7 2 10 20"></path><path d="M5 5h14l-2 14H7Z"></path>`,
         author: `<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`,
@@ -158,6 +160,12 @@ const demoUsers = [];
         category: `<path d="M4 4h6v6H4z"></path><path d="M14 4h6v6h-6z"></path><path d="M4 14h6v6H4z"></path><path d="M14 14h6v6h-6z"></path>`
       };
       return `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.info}</svg>`;
+    }
+    function passwordToggleButton(targetSelector) {
+      return `<button class="password-toggle" type="button" data-toggle-password="${esc(targetSelector)}" aria-label="Show password" title="Show password">${passwordToggleIcon(false)}</button>`;
+    }
+    function passwordToggleIcon(visible) {
+      return appIcon(visible ? "eye-off" : "eye");
     }
     const accession = (book) => book.accessionNumber || (book.id ? `ACC-${String(book.id).padStart(4, "0")}` : "");
     const barcodeDate = (book) => book.barcodeDateGenerated || `${book.addedDate}T09:00:00`;
@@ -858,7 +866,7 @@ const demoUsers = [];
               <div><label>Role</label><select name="role">${["admin","librarian"].map(role => `<option value="${role}" ${user?.role === role ? "selected" : ""}>${roleLabel(role)}</option>`).join("")}</select></div>
               <div><label>Status</label><select name="status">${["active","pending","inactive"].map(status => `<option value="${status}" ${user?.status === status ? "selected" : ""}>${status === "pending" ? "Pending Approval" : roleLabel(status)}</option>`).join("")}</select></div>
             </div>
-            <div class="field"><label>${editing ? "New Password" : "Password"}</label><input name="password" type="password" ${editing ? `placeholder="Leave blank to keep current password"` : "required"}></div>
+            <div class="field"><label>${editing ? "New Password" : "Password"}</label><div class="password-field"><input id="userPasswordInput" name="password" type="password" ${editing ? `placeholder="Leave blank to keep current password"` : "required"}>${passwordToggleButton("#userPasswordInput")}</div></div>
           </div>
           <div class="dialog-foot"><button class="secondary" type="button" data-close="viewModal">Cancel</button><button class="primary" type="submit">Save User</button></div>
         </form>
@@ -1064,8 +1072,8 @@ const demoUsers = [];
             <div class="card-title">Password</div>
             <div class="dialog-body">
               <div class="form-grid">
-                <div><label>New Password</label><input name="newPassword" type="password" minlength="4" required></div>
-                <div><label>Confirm New Password</label><input name="confirmPassword" type="password" minlength="4" required></div>
+                <div><label>New Password</label><div class="password-field"><input id="newPasswordInput" name="newPassword" type="password" minlength="4" required>${passwordToggleButton("#newPasswordInput")}</div></div>
+                <div><label>Confirm New Password</label><div class="password-field"><input id="confirmPasswordInput" name="confirmPassword" type="password" minlength="4" required>${passwordToggleButton("#confirmPasswordInput")}</div></div>
               </div>
             </div>
             <div class="dialog-foot"><button class="primary" type="submit">Update Password</button></div>
@@ -2676,6 +2684,16 @@ const demoUsers = [];
         renderNav();
       }
       if (t.id === "logoutBtn") systemConfirm("Logout of your account?", logout, "Logout");
+      if (t.dataset.togglePassword) {
+        const input = document.querySelector(t.dataset.togglePassword);
+        if (input) {
+          const visible = input.type === "password";
+          input.type = visible ? "text" : "password";
+          t.innerHTML = passwordToggleIcon(visible);
+          t.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+          t.title = visible ? "Hide password" : "Show password";
+        }
+      }
       if (t.id === "addBook" || t.id === "addItem") openBookForm();
       if (t.id === "addUser") openUserForm();
       if (t.id === "savePermissions") savePermissions();
@@ -2901,4 +2919,7 @@ const demoUsers = [];
         e.preventDefault();
         updateCurrentPassword(e.target);
       }
+    });
+    document.querySelectorAll("[data-toggle-password]").forEach(button => {
+      button.innerHTML = passwordToggleIcon(false);
     });

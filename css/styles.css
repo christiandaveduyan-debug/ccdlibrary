@@ -142,6 +142,33 @@
     .subtle { color: var(--muted); }
     .field { margin-top: 14px; }
     label { display: block; font-size: 14px; font-weight: 650; margin-bottom: 7px; color: #334155; }
+    .password-field { position: relative; }
+    .password-field input { padding-right: 46px; }
+    .password-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #64748b;
+      display: grid;
+      place-items: center;
+      padding: 0;
+    }
+    .password-toggle:hover { background: #f1f5f9; color: #334155; }
+    .password-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     input, select {
       width: 100%;
       height: 42px;

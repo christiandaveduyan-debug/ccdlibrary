@@ -29,7 +29,10 @@
           </div>
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" type="password" value="admin123" autocomplete="current-password">
+            <div class="password-field">
+              <input id="password" type="password" value="admin123" autocomplete="current-password">
+              <button class="password-toggle" type="button" data-toggle-password="#password" aria-label="Show password" title="Show password">Show</button>
+            </div>
           </div>
           <button class="primary" type="submit">Sign In</button>
         </form>
@@ -44,7 +47,10 @@
           </div>
           <div class="field">
             <label for="signupPassword">Password</label>
-            <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required>
+            <div class="password-field">
+              <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required>
+              <button class="password-toggle" type="button" data-toggle-password="#signupPassword" aria-label="Show password" title="Show password">Show</button>
+            </div>
           </div>
           <button class="primary" type="submit">Request Account</button>
         </form>
