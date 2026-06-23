@@ -27,6 +27,8 @@ export function BookForm({ book, onSubmit, onCancel }: BookFormProps) {
     borrower: '',
     dueDate: '',
     barcode: '',
+    damageNote: '',
+    repairStatus: '',
   });
 
   useEffect(() => {
@@ -46,14 +48,23 @@ export function BookForm({ book, onSubmit, onCancel }: BookFormProps) {
         borrower: book.borrower || '',
         dueDate: book.dueDate || '',
         barcode: book.barcode || '',
+        damageNote: book.damageNote || '',
+        repairStatus: book.repairStatus || '',
       });
     }
   }, [book]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.status === 'damaged' && !String(formData.damageNote || '').trim()) {
+      alert('Please describe the book damage before marking it as damaged.');
+      return;
+    }
     onSubmit({
       ...formData,
+      availableCopies: formData.status === 'damaged' ? 0 : formData.availableCopies,
+      damageNote: formData.status === 'damaged' ? formData.damageNote : '',
+      repairStatus: formData.status === 'damaged' ? (formData.repairStatus || 'Damaged') : '',
       id: book?.id,
     });
   };
@@ -243,6 +254,21 @@ export function BookForm({ book, onSubmit, onCancel }: BookFormProps) {
               </select>
             </div>
           </div>
+
+          {formData.status === 'damaged' && (
+            <div className="pt-2">
+              <Label htmlFor="damageNote" className="text-slate-700 font-medium">Damage Note</Label>
+              <Input
+                id="damageNote"
+                name="damageNote"
+                value={formData.damageNote || ''}
+                onChange={handleChange}
+                required
+                className="mt-1 border-slate-300 focus:border-sky-500"
+                placeholder="Describe the damage"
+              />
+            </div>
+          )}
 
           {formData.status === 'borrowed' && (
             <div className="grid grid-cols-2 gap-4 pt-2">

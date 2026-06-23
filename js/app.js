@@ -1755,7 +1755,7 @@ const demoUsers = [];
     }
 
     function openBookForm(book = null) {
-      const b = book || { title:"", author:"", isbn:"", category:"", publisher:"", callNumber:"", status:"available", location:"", publishedYear:new Date().getFullYear(), copies:1, availableCopies:1, barcode:"", accessionNumber:"" };
+      const b = book || { title:"", author:"", isbn:"", category:"", publisher:"", callNumber:"", status:"available", location:"", publishedYear:new Date().getFullYear(), copies:1, availableCopies:1, barcode:"", accessionNumber:"", damageNote:"", repairStatus:"" };
       $("#bookModal").innerHTML = `<div class="dialog">
         <div class="dialog-head"><h2>${book ? "Edit Item" : "Add New Item"}</h2><button class="icon-btn" data-close="bookModal">X</button></div>
         <form id="bookForm">
@@ -1764,6 +1764,7 @@ const demoUsers = [];
             ${catalogField("publisher","publisher","Publisher",b.publisher)}${field("callNumber","Call Number",b.callNumber)}${field("location","Location",b.location)}${field("publishedYear","Published Year",b.publishedYear,false,"number")}
             ${field("copies","Total Copies *",b.copies,true,"number",1)}${field("availableCopies","Available Copies *",b.availableCopies,true,"number",0)}
             <div><label>Status</label><select name="status">${["unprocessed","available","borrowed","lost","damaged","replaced"].map(s => `<option value="${s}" ${(b.status === s || (b.status === "missing" && s === "lost")) ? "selected" : ""}>${statusLabel(s)}</option>`).join("")}</select></div>
+            ${field("damageNote","Damage Note",b.damageNote || "")}
             ${field("barcode","Barcode",b.barcode)}
             ${field("accessionNumber","Accession Number",accession(b))}
           </div></div>
@@ -1778,13 +1779,28 @@ const demoUsers = [];
           submitButton.textContent = book ? "Updating..." : "Saving...";
         }
         const data = Object.fromEntries(new FormData(e.currentTarget));
+        const normalizedStatus = data.status === "lost" ? "missing" : data.status;
+        if (normalizedStatus === "damaged" && !cleanImportValue(data.damageNote)) {
+          systemDialog({
+            title:"Damage Note Required",
+            message:"Please describe the book damage before marking it as damaged.",
+            confirmText:"OK"
+          });
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = book ? "Update Item" : "Add Item";
+          }
+          return;
+        }
         const next = {
           ...b,
           ...data,
-          status: data.status === "lost" ? "missing" : data.status,
+          status: normalizedStatus,
           publishedYear: Number(data.publishedYear) || new Date().getFullYear(),
           copies: Number(data.copies) || 1,
-          availableCopies: Number(data.availableCopies) || 0
+          availableCopies: normalizedStatus === "damaged" ? 0 : Number(data.availableCopies) || 0,
+          damageNote: normalizedStatus === "damaged" ? cleanImportValue(data.damageNote) : "",
+          repairStatus: normalizedStatus === "damaged" ? (b.repairStatus || "Damaged") : ""
         };
 
         try {

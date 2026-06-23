@@ -36,9 +36,20 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
       location: formData.get('location') as string,
       publishedYear: parseInt(formData.get('publishedYear') as string) || new Date().getFullYear(),
       copies: parseInt(formData.get('copies') as string) || 1,
-      availableCopies: parseInt(formData.get('availableCopies') as string) || 1,
+      availableCopies: (formData.get('status') as Book['status']) === 'damaged'
+        ? 0
+        : parseInt(formData.get('availableCopies') as string) || 1,
       barcode: formData.get('barcode') as string,
+      damageNote: (formData.get('status') as Book['status']) === 'damaged'
+        ? formData.get('damageNote') as string
+        : '',
+      repairStatus: (formData.get('status') as Book['status']) === 'damaged' ? 'Damaged' : '',
     };
+
+    if (bookData.status === 'damaged' && !bookData.damageNote.trim()) {
+      alert('Please describe the book damage before marking it as damaged.');
+      return;
+    }
 
     if (editingBook) {
       onUpdate({ ...editingBook, ...bookData });
@@ -260,6 +271,10 @@ export function BooksPage({ books, onAdd, onUpdate, onDelete }: BooksPageProps) 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Barcode</label>
                   <Input name="barcode" defaultValue={editingBook?.barcode} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Damage Note</label>
+                  <Input name="damageNote" defaultValue={editingBook?.damageNote} placeholder="Required when status is Damaged" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
