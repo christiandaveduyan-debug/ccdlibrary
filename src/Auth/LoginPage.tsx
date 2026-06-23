@@ -77,7 +77,7 @@ export function LoginPage({ onLogin, onCreateAccount, errorMessage, infoMessage 
             <BookOpen className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">City College of Davao Library</h1>
-          <p className="text-slate-500">Dedicated to Excellence, Committed Service</p>
+          <p className="text-slate-500">Dedicated to Excellence, Committed to Service</p>
         </div>
 
         {/* Login Card */}

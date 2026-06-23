@@ -57,7 +57,7 @@ const demoUsers = [];
     let customCatalog = { author:[], publisher:[], category:[] };
     let librarySettings = {
       libraryName:"City College of Davao Library",
-      tagline:"Dedicated to Excellence, Committed Service",
+      tagline:"Dedicated to Excellence, Committed to Service",
       contactEmail:"library@ccd.edu",
       contactPhone:"555-0000",
       address:"Davao City",
