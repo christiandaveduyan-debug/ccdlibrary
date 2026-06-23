@@ -2450,11 +2450,40 @@ const demoUsers = [];
         throw new Error("Excel workbook import needs the spreadsheet parser to load. Check your internet connection or import a .csv file.");
       }
 
-      const workbook = XLSX.read(buffer, { type:"array", cellDates:true });
+      const workbook = window.XLSX.read(buffer, { type:"array", cellDates:true });
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) return [];
       const sheet = workbook.Sheets[firstSheetName];
-      return tableRowsToObjects(XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:"" }));
+      return tableRowsToObjects(window.XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:"" }));
+    }
+
+    function ensureWorkbookParser() {
+      if (window.XLSX) return Promise.resolve();
+      if (window.__xlsxLoading) return window.__xlsxLoading;
+
+      window.__xlsxLoading = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        const timeout = setTimeout(() => {
+          reject(new Error("Excel parser did not finish loading. Please check your internet connection and try again."));
+        }, 10000);
+
+        script.onload = () => {
+          clearTimeout(timeout);
+          window.XLSX ? resolve() : reject(new Error("Excel parser loaded but is unavailable."));
+        };
+        script.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error("Excel workbook import needs the spreadsheet parser to load. Check your internet connection or import a .csv file."));
+        };
+
+        script.defer = true;
+        script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        document.head.appendChild(script);
+      }).finally(() => {
+        window.__xlsxLoading = null;
+      });
+
+      return window.__xlsxLoading;
     }
 
     function decodeImportBuffer(buffer) {
@@ -2467,7 +2496,7 @@ const demoUsers = [];
 
     function parseInventoryImport(text, fileName) {
       if (/\.xlsx$/i.test(fileName)) {
-        throw new Error("Unable to read this .xlsx workbook. Please try a standard Excel workbook or save it as .csv.");
+        throw new Error("This .xlsx file needs the Excel workbook parser. Please try importing it again.");
       }
 
       if (/<table[\s>]/i.test(text)) {
@@ -2565,11 +2594,14 @@ const demoUsers = [];
       reader.onload = async () => {
         try {
           let rows = [];
-          if (isWorkbook && window.XLSX) {
+          if (isWorkbook) {
+            await ensureWorkbookParser();
             try {
               rows = parseWorkbookRows(reader.result);
             } catch (error) {
-              if (/\.xlsx$/i.test(file.name)) throw error;
+              if (/\.xlsx$/i.test(file.name)) {
+                throw new Error(error.message || "Unable to read this Excel workbook. Please check that the file is not password-protected or corrupted.");
+              }
               rows = parseInventoryImport(decodeImportBuffer(reader.result), file.name);
             }
           } else {
@@ -2588,7 +2620,7 @@ const demoUsers = [];
         }
       };
       reader.onerror = () => systemAlert("Unable to read this inventory file.");
-      if (isWorkbook && window.XLSX) reader.readAsArrayBuffer(file);
+      if (isWorkbook) reader.readAsArrayBuffer(file);
       else reader.readAsText(file);
     }
 
