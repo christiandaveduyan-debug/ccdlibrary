@@ -1730,6 +1730,7 @@ const demoUsers = [];
               <div><label>Category</label><input value="${esc(selectedBook.category)}" readonly></div>
               <div><label>Shelf Location</label><input value="${esc(selectedBook.location || "-")}" readonly></div>
               <div><label>Current Status</label><select id="accessionStatusOption">${["available","borrowed","missing","damaged","replaced"].map(s => `<option value="${s}" ${selectedBook.status === s ? "selected" : ""}>${accessionStatusLabel(s)}</option>`).join("")}</select></div>
+              <div><label>Damage Note (required if damaged)</label><input id="accessionDamageNote" value="${esc(selectedBook.damageNote || "")}" placeholder="Describe the damage before updating"></div>
             </div></div>
             <div class="dialog-foot" style="flex-wrap:wrap">
               <button class="primary" type="button" id="markAccessionStatus">Update</button>
@@ -2330,16 +2331,23 @@ const demoUsers = [];
       renderAccessionUpdate();
     }
 
-    async function updateAccessionStatus(nextStatus) {
+    async function updateAccessionStatus(nextStatus, damageNote = "") {
       const book = books.find(b => b.id === accessionLookup.bookId);
       if (!book) return;
       const previousStatus = accessionStatusLabel(book.status);
       const normalizedStatus = nextStatus === "missing" ? "missing" : nextStatus;
+      const cleanDamageNote = cleanImportValue(damageNote);
+      if (normalizedStatus === "damaged" && !cleanDamageNote) {
+        systemAlert("Please describe the book damage before marking it as damaged.", "Damage Note Required");
+        return;
+      }
       const newStatusLabel = accessionStatusLabel(normalizedStatus);
       const nextBook = {
         ...book,
         status:normalizedStatus,
         availableCopies:["available","replaced"].includes(normalizedStatus) ? Math.max(1, book.availableCopies || 0) : 0,
+        damageNote:normalizedStatus === "damaged" ? cleanDamageNote : "",
+        repairStatus:normalizedStatus === "damaged" ? (book.repairStatus || "Damaged") : "",
         borrower:normalizedStatus === "borrowed" ? (book.borrower || "Recorded borrower") : "",
         borrowerId:normalizedStatus === "borrowed" ? book.borrowerId : "",
         borrowDate:normalizedStatus === "borrowed" ? (book.borrowDate || isoDate()) : "",
@@ -2656,7 +2664,7 @@ const demoUsers = [];
         renderNotifications();
       }
       if (t.id === "reportDamage") openReportDamage();
-      if (t.id === "markAccessionStatus") updateAccessionStatus($("#accessionStatusOption").value);
+      if (t.id === "markAccessionStatus") updateAccessionStatus($("#accessionStatusOption").value, $("#accessionDamageNote")?.value || "");
       if (t.id === "clearAccessionLookup") {
         accessionLookup = { number:"", bookId:null, verified:false };
         renderAccessionUpdate();
