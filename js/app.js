@@ -225,6 +225,24 @@ const demoUsers = [];
       error.style.display = "block";
     }
 
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function showLoginTransition(work) {
+      const transition = $("#loginTransition");
+      if (!transition) {
+        await work();
+        return;
+      }
+
+      transition.classList.add("active");
+      transition.setAttribute("aria-hidden", "false");
+      await wait(320);
+      await work();
+      await wait(760);
+      transition.classList.remove("active");
+      transition.setAttribute("aria-hidden", "true");
+    }
+
     async function apiRequest(path, body) {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method:"POST",
@@ -277,12 +295,15 @@ const demoUsers = [];
       return existing || user;
     }
 
-    function completeLogin(user) {
+    async function completeLogin(user) {
       currentUser = user;
-      $("#login").style.display = "none";
-      $("#app").classList.add("logged");
       currentPage = "dashboard";
-      loadAppData().then(() => renderShell());
+      await showLoginTransition(async () => {
+        $("#login").style.display = "none";
+        $("#app").classList.add("logged");
+        await loadAppData();
+        renderShell();
+      });
     }
 
     async function login(email, password) {
@@ -293,7 +314,7 @@ const demoUsers = [];
         const response = await apiRequest("/api/login", { email:cleanEmail, password });
         const apiUser = response?.user || response;
         localStorage.setItem("authToken", response?.token || "");
-        completeLogin(syncUser(normalizeApiUser(apiUser, { email:cleanEmail })));
+        await completeLogin(syncUser(normalizeApiUser(apiUser, { email:cleanEmail })));
       } catch (error) {
         showLoginError(error.message || "Invalid email or password. Please try again.");
       }
@@ -334,6 +355,8 @@ const demoUsers = [];
 
     function logout() {
       currentUser = null;
+      $("#loginTransition")?.classList.remove("active");
+      $("#loginTransition")?.setAttribute("aria-hidden", "true");
       $("#app").classList.remove("logged");
       $("#login").style.display = "grid";
       $("#loginError").style.display = "none";

@@ -62,6 +62,129 @@
     button, input, select { font: inherit; }
     button { cursor: pointer; }
     .login-shell, .app { position: relative; z-index: 1; }
+    .login-transition {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(240, 253, 244, .96), rgba(220, 252, 231, .94)),
+        radial-gradient(circle at center, rgba(22, 163, 74, .16), transparent 42%);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .28s ease, visibility .28s ease;
+    }
+    .login-transition.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .transition-stage {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      width: min(100%, 340px);
+      min-height: 320px;
+      place-content: center;
+      text-align: center;
+    }
+    .transition-logo {
+      position: relative;
+      z-index: 2;
+      width: 116px;
+      height: 116px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(255, 255, 255, .92);
+      box-shadow: 0 26px 60px rgba(6, 78, 59, .18), inset 0 0 0 8px rgba(220, 252, 231, .7);
+      animation: transitionLogo 1.6s ease-in-out infinite;
+    }
+    .transition-logo img {
+      width: 86%;
+      height: 86%;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 10px 18px rgba(6, 78, 59, .16));
+    }
+    .transition-rings {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      width: 190px;
+      height: 190px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .transition-rings span {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(21, 128, 61, .24);
+      animation: transitionRing 1.8s ease-out infinite;
+    }
+    .transition-rings span:nth-child(2) {
+      inset: 18px;
+      animation-delay: .2s;
+      border-color: rgba(22, 163, 74, .32);
+    }
+    .transition-rings span:nth-child(3) {
+      inset: 36px;
+      animation-delay: .4s;
+      border-color: rgba(250, 204, 21, .4);
+    }
+    .transition-copy {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      gap: 5px;
+      color: #064e3b;
+    }
+    .transition-copy strong {
+      font-size: 18px;
+      line-height: 1.2;
+    }
+    .transition-copy span {
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .transition-bar {
+      position: relative;
+      z-index: 2;
+      width: min(240px, 82vw);
+      height: 5px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(21, 128, 61, .14);
+      box-shadow: inset 0 0 0 1px rgba(21, 128, 61, .08);
+    }
+    .transition-bar i {
+      display: block;
+      width: 44%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #facc15, #22c55e, #064e3b);
+      animation: transitionBar 1.15s ease-in-out infinite;
+    }
+    @keyframes transitionLogo {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.025); }
+    }
+    @keyframes transitionRing {
+      0% { transform: scale(.78); opacity: .78; }
+      70% { opacity: .28; }
+      100% { transform: scale(1.08); opacity: 0; }
+    }
+    @keyframes transitionBar {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(260%); }
+    }
     .login-shell {
       min-height: 100vh;
       display: grid;
@@ -673,4 +796,17 @@
       .login-card { border-radius: 18px; }
       .brand { padding: 28px 22px; }
       .login-panel { padding: 28px 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .login-transition,
+      .transition-logo,
+      .transition-rings span,
+      .transition-bar i {
+        animation: none;
+        transition: none;
+      }
+      .transition-bar i {
+        width: 100%;
+        transform: none;
+      }
     }

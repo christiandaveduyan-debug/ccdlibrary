@@ -127,6 +127,25 @@ function App() {
       <div id="bookModal" className="modal"></div>
       <div id="viewModal" className="modal"></div>
       <div id="systemModal" className="modal"></div>
+      <div id="loginTransition" className="login-transition" aria-hidden="true">
+        <div className="transition-stage">
+          <div className="transition-rings" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div className="transition-logo">
+            <img src={logo} alt="" />
+          </div>
+          <div className="transition-copy">
+            <strong>City College of Davao Library</strong>
+            <span>Preparing your workspace</span>
+          </div>
+          <div className="transition-bar" aria-hidden="true">
+            <i></i>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
