@@ -271,11 +271,12 @@ const demoUsers = [
       damaged: "background:#ffedd5;color:#c2410c"
     }[status] || "background:#f1f5f9;color:#475569");
     const damageStatusStyle = (status) => ({
-      "Minor Damage": "background:#fef3c7;color:#b45309",
+      "Damaged": "background:#ffedd5;color:#c2410c",
       "For Repair": "background:#e0f2fe;color:#0369a1",
       "Beyond Repair": "background:#fee2e2;color:#b91c1c",
       "Replaced": "background:#d1fae5;color:#047857"
     }[status] || "background:#f1f5f9;color:#475569");
+    const damageStatusLabel = (status) => String(status || "").toLowerCase().includes("minor") ? "Damaged" : (status || "Damaged");
 
     function showLoginError(message, tone = "error") {
       const error = $("#loginError");
@@ -1738,13 +1739,13 @@ const demoUsers = [
       const rows = filteredBooks().filter(b => b.status === "damaged" || damagedIds.has(b.id));
       const visibleRows = rows.filter(b => {
         const record = damagedRecord(b);
-        return filters.status === "all" || record.repairStatus === filters.status;
+        return filters.status === "all" || damageStatusLabel(record.repairStatus) === filters.status;
       });
       $("#main").innerHTML = pageHead("Damaged Items", "Books that are worn out or damaged", `<button class="primary" id="reportDamage">+ Report Damage</button>`) + `
         <div class="card filters"><div class="filter-row" style="grid-template-columns:1fr 180px 190px">
           <input id="searchDamaged" placeholder="Search by barcode, title, accession, or damage description..." value="${esc(filters.search)}">
           <select id="damageStatusFilter">
-            ${["all","Minor Damage","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Repair Status" : s}</option>`).join("")}
+            ${["all","Damaged","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Repair Status" : s}</option>`).join("")}
           </select>
           <select id="damageCategoryFilter"><option value="">All Categories</option>${[...new Set(books.map(b => b.category))].sort().map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
@@ -1758,7 +1759,7 @@ const demoUsers = [
               <td>${esc(record.description || "No damage description recorded.")}</td>
               <td>${record.dateReported ? fmt(record.dateReported) : "-"}</td>
               <td>${esc(record.reportedBy || "-")}</td>
-              <td><span class="pill" style="${damageStatusStyle(record.repairStatus || "Minor Damage")}">${esc(record.repairStatus || "Minor Damage")}</span></td>
+              <td><span class="pill" style="${damageStatusStyle(damageStatusLabel(record.repairStatus))}">${esc(damageStatusLabel(record.repairStatus))}</span></td>
               <td><div class="actions">
                 <button class="icon-btn" title="Upload Damage Photo" data-damage-photo="${b.id}">Photo</button>
                 <button class="icon-btn" title="Mark for Repair" data-mark-repair="${b.id}">Repair</button>
@@ -2257,7 +2258,7 @@ const demoUsers = [
         description:data.description || existing?.description || "",
         dateReported:existing?.dateReported || new Date().toISOString(),
         reportedBy:existing?.reportedBy || currentUser.name,
-        repairStatus:data.repairStatus || existing?.repairStatus || "Minor Damage",
+        repairStatus:damageStatusLabel(data.repairStatus || existing?.repairStatus),
         photoNote:data.photoNote || existing?.photoNote || "",
         archived:false
       };
@@ -2275,7 +2276,7 @@ const demoUsers = [
           <div class="dialog-body">
             <div class="field"><label>Book</label><select name="bookId">${books.map(b => `<option value="${b.id}" ${selected && selected.id === b.id ? "selected" : ""}>${esc(b.title)} - ${esc(accession(b))}</option>`).join("")}</select></div>
             <div class="field"><label>Damage Description</label><input name="description" placeholder="Describe the damage" required></div>
-            <div class="field"><label>Repair Status</label><select name="repairStatus">${["Minor Damage","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}">${s}</option>`).join("")}</select></div>
+            <div class="field"><label>Repair Status</label><select name="repairStatus">${["Damaged","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}">${s}</option>`).join("")}</select></div>
           </div>
           <div class="dialog-foot"><button class="secondary" type="button" data-close="viewModal">Cancel</button><button class="primary" type="submit">Report Damage</button></div>
         </form>

@@ -186,7 +186,7 @@ const demoUsers = [];
     const damagedRecord = (book) => damagedRecords.find(d => d.bookId === book.id && !d.archived) || {
       bookId: book.id,
       description: book.damageNote || "",
-      repairStatus: book.repairStatus || (book.status === "damaged" ? "Damaged" : ""),
+      repairStatus: damageStatusLabel(book.repairStatus) || (book.status === "damaged" ? "Damaged" : ""),
       reportedBy: "",
       dateReported: ""
     };
@@ -208,6 +208,7 @@ const demoUsers = [];
       "Beyond Repair": "background:#fee2e2;color:#b91c1c",
       "Replaced": "background:#d1fae5;color:#047857"
     }[status] || "background:#f1f5f9;color:#475569");
+    const damageStatusLabel = (status) => String(status || "").toLowerCase().includes("minor") ? "Damaged" : (status || "Damaged");
 
     function showLoginError(message, tone = "error") {
       const error = $("#loginError");
@@ -1623,7 +1624,7 @@ const demoUsers = [];
       const selectedDamageStatus = filters.status === "damaged" ? "Damaged" : filters.status;
       const visibleRows = rows.filter(b => {
         const record = damagedRecord(b);
-        return !damageStatuses.includes(selectedDamageStatus) || selectedDamageStatus === "all" || (record.repairStatus || "Damaged") === selectedDamageStatus;
+        return !damageStatuses.includes(selectedDamageStatus) || selectedDamageStatus === "all" || damageStatusLabel(record.repairStatus) === selectedDamageStatus;
       });
       $("#main").innerHTML = pageHead("Damaged Items", "Books that are worn out or damaged", `<button class="primary" id="reportDamage">+ Report Damage</button>`) + `
         <div class="card filters"><div class="filter-row" style="grid-template-columns:1fr 180px 190px">
@@ -1643,7 +1644,7 @@ const demoUsers = [];
               <td>${esc(record.description || "No damage note recorded.")}</td>
               <td>${record.dateReported ? fmt(record.dateReported) : "-"}</td>
               <td>${esc(record.reportedBy || "-")}</td>
-              <td><span class="pill" style="${damageStatusStyle(record.repairStatus || "Damaged")}">${esc(record.repairStatus || "Damaged")}</span></td>
+              <td><span class="pill" style="${damageStatusStyle(damageStatusLabel(record.repairStatus))}">${esc(damageStatusLabel(record.repairStatus))}</span></td>
               <td><div class="actions">
                 <button class="icon-btn" title="Upload Damage Photo" data-damage-photo="${b.id}">Photo</button>
                 <button class="icon-btn" title="Mark for Repair" data-mark-repair="${b.id}">Repair</button>
@@ -2174,7 +2175,7 @@ const demoUsers = [];
         description:data.description || currentRecord.description || "",
         dateReported:currentRecord.dateReported || new Date().toISOString(),
         reportedBy:currentRecord.reportedBy || currentUser.name,
-        repairStatus:data.repairStatus || currentRecord.repairStatus || "Damaged",
+        repairStatus:damageStatusLabel(data.repairStatus || currentRecord.repairStatus),
         photoNote:data.photoNote || currentRecord.photoNote || "",
         archived:false
       };
