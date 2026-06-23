@@ -53,11 +53,19 @@ CREATE TABLE IF NOT EXISTS books (
     available_copies INT NOT NULL DEFAULT 1,
     added_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     accession_number VARCHAR(100) UNIQUE,
+    damage_note TEXT,
+    repair_status VARCHAR(100),
     barcode VARCHAR(100) UNIQUE
 );
 
 ALTER TABLE books
 ADD COLUMN IF NOT EXISTS accession_number VARCHAR(100) UNIQUE;
+
+ALTER TABLE books
+ADD COLUMN IF NOT EXISTS damage_note TEXT;
+
+ALTER TABLE books
+ADD COLUMN IF NOT EXISTS repair_status VARCHAR(100);
 
 ALTER TABLE books
 DROP CONSTRAINT IF EXISTS books_status_check;

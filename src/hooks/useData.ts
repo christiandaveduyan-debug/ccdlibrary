@@ -17,6 +17,8 @@ export interface Book {
   available_copies: number;
   added_date: string;
   accession_number?: string;
+  damage_note?: string;
+  repair_status?: string;
   barcode?: string;
 }
 

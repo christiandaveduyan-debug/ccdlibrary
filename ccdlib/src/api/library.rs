@@ -31,6 +31,8 @@ pub struct BookResponse {
     pub available_copies: i32,
     pub added_date: String,
     pub accession_number: Option<String>,
+    pub damage_note: Option<String>,
+    pub repair_status: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -83,6 +85,8 @@ pub struct CreateBookRequest {
     pub copies: Option<i32>,
     pub available_copies: Option<i32>,
     pub accession_number: Option<String>,
+    pub damage_note: Option<String>,
+    pub repair_status: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -100,6 +104,8 @@ pub struct UpdateBookRequest {
     pub copies: Option<i32>,
     pub available_copies: Option<i32>,
     pub accession_number: Option<String>,
+    pub damage_note: Option<String>,
+    pub repair_status: Option<String>,
     pub barcode: Option<String>,
 }
 
@@ -172,7 +178,7 @@ pub struct ApiResponse<T> {
 // GET all books
 pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query(
-        "SELECT b.id::text, b.title, b.author_id::text, a.name AS author, b.category_id::text, c.name AS category, b.publisher_id::text, p.name AS publisher, b.isbn, b.call_number, b.status, b.location, b.published_year, b.copies, b.available_copies, b.added_date::text, b.accession_number, b.barcode
+        "SELECT b.id::text, b.title, b.author_id::text, a.name AS author, b.category_id::text, c.name AS category, b.publisher_id::text, p.name AS publisher, b.isbn, b.call_number, b.status, b.location, b.published_year, b.copies, b.available_copies, b.added_date::text, b.accession_number, b.damage_note, b.repair_status, b.barcode
          FROM books b
          LEFT JOIN authors a ON b.author_id = a.id
          LEFT JOIN categories c ON b.category_id = c.id
@@ -203,6 +209,8 @@ pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
                     available_copies: row.get("available_copies"),
                     added_date: row.try_get("added_date").unwrap_or_default(),
                     accession_number: row.try_get("accession_number").ok(),
+                    damage_note: row.try_get("damage_note").ok(),
+                    repair_status: row.try_get("repair_status").ok(),
                     barcode: row.try_get("barcode").ok(),
                 })
                 .collect();
@@ -404,8 +412,8 @@ pub async fn add_book(
     let book_id = Uuid::new_v4().to_string();
 
     let result = sqlx::query(
-        "INSERT INTO books (id, title, author_id, category_id, publisher_id, isbn, call_number, status, location, published_year, copies, available_copies, accession_number, barcode) 
-         VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+        "INSERT INTO books (id, title, author_id, category_id, publisher_id, isbn, call_number, status, location, published_year, copies, available_copies, accession_number, damage_note, repair_status, barcode) 
+         VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"
     )
     .bind(book_id.clone())
     .bind(&payload.title)
@@ -420,6 +428,8 @@ pub async fn add_book(
     .bind(payload.copies.unwrap_or(1))
     .bind(payload.available_copies.unwrap_or(1))
     .bind(&payload.accession_number)
+    .bind(&payload.damage_note)
+    .bind(&payload.repair_status)
     .bind(&payload.barcode)
     .execute(&state.db)
     .await;
@@ -467,7 +477,9 @@ pub async fn update_book(
             copies = COALESCE($11, copies),
             available_copies = COALESCE($12, available_copies),
             accession_number = COALESCE($13, accession_number),
-            barcode = COALESCE($14, barcode)
+            damage_note = COALESCE($14, damage_note),
+            repair_status = COALESCE($15, repair_status),
+            barcode = COALESCE($16, barcode)
          WHERE id::text = $1",
     )
     .bind(&book_id)
@@ -483,6 +495,8 @@ pub async fn update_book(
     .bind(payload.copies)
     .bind(payload.available_copies)
     .bind(&payload.accession_number)
+    .bind(&payload.damage_note)
+    .bind(&payload.repair_status)
     .bind(&payload.barcode)
     .execute(&state.db)
     .await;

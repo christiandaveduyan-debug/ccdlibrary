@@ -183,7 +183,13 @@ const demoUsers = [];
     const inventoryStatus = (status) => status === "missing" ? "lost" : status === "reserved" ? "borrowed" : status;
     const inventoryStatusLabel = (status) => statusLabel(inventoryStatus(status));
     const verificationRecord = (book) => verificationRecords.find(v => v.bookId === book.id) || {};
-    const damagedRecord = (book) => damagedRecords.find(d => d.bookId === book.id && !d.archived) || {};
+    const damagedRecord = (book) => damagedRecords.find(d => d.bookId === book.id && !d.archived) || {
+      bookId: book.id,
+      description: book.damageNote || "",
+      repairStatus: book.repairStatus || (book.status === "damaged" ? "Damaged" : ""),
+      reportedBy: "",
+      dateReported: ""
+    };
     const memberById = (memberId) => members.find(m => m.id === memberId) || members[0];
     const transactionNumber = () => `TXN-${new Date().getFullYear()}-${String(activities.length + 1).padStart(4, "0")}`;
     const statusClass = (status) => ({
@@ -197,7 +203,7 @@ const demoUsers = [];
       damaged: "background:#ffedd5;color:#c2410c"
     }[status] || "background:#f1f5f9;color:#475569");
     const damageStatusStyle = (status) => ({
-      "Minor Damage": "background:#fef3c7;color:#b45309",
+      "Damaged": "background:#ffedd5;color:#c2410c",
       "For Repair": "background:#e0f2fe;color:#0369a1",
       "Beyond Repair": "background:#fee2e2;color:#b91c1c",
       "Replaced": "background:#d1fae5;color:#047857"
@@ -349,6 +355,8 @@ const demoUsers = [];
               availableCopies: b.available_copies,
               addedDate: b.added_date,
               accessionNumber: b.accession_number || "",
+              damageNote: b.damage_note || "",
+              repairStatus: b.repair_status || "",
               barcode: b.barcode || ""
             }));
           }
@@ -493,6 +501,8 @@ const demoUsers = [];
       book.categoryId = await ensureCatalogEntry("category", book.category);
       book.publisherId = await ensureCatalogEntry("publisher", book.publisher);
       const optionalText = (value) => cleanImportValue(value) || null;
+      const copies = Number(book.copies);
+      const availableCopies = Number(book.availableCopies);
 
       const payload = {
         title: book.title,
@@ -504,9 +514,11 @@ const demoUsers = [];
         status: book.status === "lost" ? "missing" : book.status,
         location: optionalText(book.location),
         published_year: Number(book.publishedYear) || 0,
-        copies: Number(book.copies) || 1,
-        available_copies: Number(book.availableCopies) || 1,
+        copies: Number.isFinite(copies) && copies > 0 ? copies : 1,
+        available_copies: Number.isFinite(availableCopies) ? Math.max(0, availableCopies) : 1,
         accession_number: optionalText(book.accessionNumber || accession(book)),
+        damage_note: book.damageNote ?? null,
+        repair_status: book.repairStatus ?? null,
         barcode: optionalText(book.barcode)
       };
 
@@ -1562,7 +1574,9 @@ const demoUsers = [];
     }
 
     function renderStockVerification(title = "Stock Verification") {
-      const rows = filteredBooks();
+      const rows = title === "Missing Items"
+        ? filteredBooks().filter(b => b.status === "missing" || verificationRecord(b).physicalStatus === "lost")
+        : filteredBooks();
       const mismatches = books.filter(b => {
         const record = verificationRecord(b);
         return record.physicalStatus && record.physicalStatus !== inventoryStatus(b.status);
@@ -1604,31 +1618,32 @@ const demoUsers = [];
     }
 
     function renderDamagedItems() {
-      const damagedIds = new Set(damagedRecords.filter(d => !d.archived).map(d => d.bookId));
-      const rows = filteredBooks().filter(b => b.status === "damaged" || damagedIds.has(b.id));
+      const rows = filteredBooks().filter(b => b.status === "damaged");
+      const damageStatuses = ["all","Damaged","For Repair","Beyond Repair","Replaced"];
+      const selectedDamageStatus = filters.status === "damaged" ? "Damaged" : filters.status;
       const visibleRows = rows.filter(b => {
         const record = damagedRecord(b);
-        return filters.status === "all" || record.repairStatus === filters.status;
+        return !damageStatuses.includes(selectedDamageStatus) || selectedDamageStatus === "all" || (record.repairStatus || "Damaged") === selectedDamageStatus;
       });
       $("#main").innerHTML = pageHead("Damaged Items", "Books that are worn out or damaged", `<button class="primary" id="reportDamage">+ Report Damage</button>`) + `
         <div class="card filters"><div class="filter-row" style="grid-template-columns:1fr 180px 190px">
           <input id="searchDamaged" placeholder="Search by barcode, title, accession, or damage description..." value="${esc(filters.search)}">
           <select id="damageStatusFilter">
-            ${["all","Minor Damage","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Repair Status" : s}</option>`).join("")}
+            ${damageStatuses.map(s => `<option value="${s}" ${selectedDamageStatus === s ? "selected" : ""}>${s === "all" ? "All Repair Status" : s}</option>`).join("")}
           </select>
           <select id="damageCategoryFilter"><option value="">All Categories</option>${[...new Set(books.map(b => b.category))].sort().map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div></div>
         <div class="card table-wrap"><table>
-          <thead><tr><th>Barcode</th><th>Title</th><th>Damage Description</th><th>Date Reported</th><th>Reported By</th><th>Repair Status</th><th style="text-align:right">Actions</th></tr></thead>
+          <thead><tr><th>Barcode</th><th>Title</th><th>Damage Note</th><th>Date Reported</th><th>Reported By</th><th>Damage Status</th><th style="text-align:right">Actions</th></tr></thead>
           <tbody>${visibleRows.map(b => {
             const record = damagedRecord(b);
             return `<tr>
               <td class="mono">${esc(b.barcode || "-")}</td>
               <td><strong>${esc(b.title)}</strong><p class="subtle mono" style="font-size:12px">${esc(accession(b))}</p></td>
-              <td>${esc(record.description || "No damage description recorded.")}</td>
+              <td>${esc(record.description || "No damage note recorded.")}</td>
               <td>${record.dateReported ? fmt(record.dateReported) : "-"}</td>
               <td>${esc(record.reportedBy || "-")}</td>
-              <td><span class="pill" style="${damageStatusStyle(record.repairStatus || "Minor Damage")}">${esc(record.repairStatus || "Minor Damage")}</span></td>
+              <td><span class="pill" style="${damageStatusStyle(record.repairStatus || "Damaged")}">${esc(record.repairStatus || "Damaged")}</span></td>
               <td><div class="actions">
                 <button class="icon-btn" title="Upload Damage Photo" data-damage-photo="${b.id}">Photo</button>
                 <button class="icon-btn" title="Mark for Repair" data-mark-repair="${b.id}">Repair</button>
@@ -2052,7 +2067,7 @@ const demoUsers = [];
         }
         upsertVerification(scanned.id, data.physicalStatus);
         $("#scanStockResult").innerHTML = `<strong style="color:#047857">Verified:</strong> ${esc(scanned.title)} as ${esc(statusLabel(data.physicalStatus))}`;
-        renderStockVerification();
+        renderPage();
       };
     }
 
@@ -2112,29 +2127,58 @@ const demoUsers = [];
     }
 
     function markMissingItem(book) {
-      systemConfirm(`Mark "${book.title}" as missing?`, () => {
+      systemConfirm(`Mark "${book.title}" as missing?`, async () => {
+        const nextBook = {
+          ...book,
+          status:"missing",
+          availableCopies:0,
+          lastUpdated:new Date().toISOString()
+        };
+        const response = await saveBookToAPI(nextBook, false);
+        if (!response.success) {
+          systemAlert(response.message || "Unable to mark this book missing.");
+          return;
+        }
         upsertVerification(book.id, "lost");
-        books = books.map(b => b.id === book.id ? { ...b, status:"missing", lastUpdated:new Date().toISOString() } : b);
+        damagedRecords = damagedRecords.map(d => d.bookId === book.id && !d.archived ? { ...d, archived:true } : d);
+        books = books.map(b => b.id === book.id ? nextBook : b);
         addMovementHistory(book, book.location || "-", "Missing Review", "Marked Missing");
         renderPage();
       }, "Mark Missing");
     }
 
-    function upsertDamageRecord(bookId, data) {
+    async function upsertDamageRecord(bookId, data) {
       const existing = damagedRecords.find(d => d.bookId === bookId && !d.archived);
+      const book = books.find(b => b.id === bookId);
+      if (!book) return false;
+      const currentRecord = existing || damagedRecord(book);
       const record = {
         bookId,
-        description:data.description || existing?.description || "",
-        dateReported:existing?.dateReported || new Date().toISOString(),
-        reportedBy:existing?.reportedBy || currentUser.name,
-        repairStatus:data.repairStatus || existing?.repairStatus || "Minor Damage",
-        photoNote:data.photoNote || existing?.photoNote || "",
+        description:data.description || currentRecord.description || "",
+        dateReported:currentRecord.dateReported || new Date().toISOString(),
+        reportedBy:currentRecord.reportedBy || currentUser.name,
+        repairStatus:data.repairStatus || currentRecord.repairStatus || "Damaged",
+        photoNote:data.photoNote || currentRecord.photoNote || "",
         archived:false
       };
+      const nextBook = {
+        ...book,
+        status:"damaged",
+        availableCopies:0,
+        damageNote:record.description,
+        repairStatus:record.repairStatus,
+        lastUpdated:new Date().toISOString()
+      };
+      const response = await saveBookToAPI(nextBook, false);
+      if (!response.success) {
+        systemAlert(response.message || "Unable to save damage note.");
+        return false;
+      }
       damagedRecords = existing
         ? damagedRecords.map(d => d === existing ? record : d)
         : [record, ...damagedRecords];
-      books = books.map(b => b.id === bookId ? { ...b, status:"damaged", lastUpdated:new Date().toISOString() } : b);
+      books = books.map(b => b.id === bookId ? nextBook : b);
+      return true;
     }
 
     function openReportDamage(book = null) {
@@ -2144,17 +2188,18 @@ const demoUsers = [];
         <form id="damageForm">
           <div class="dialog-body">
             <div class="field"><label>Book</label><select name="bookId">${books.map(b => `<option value="${b.id}" ${selected && selected.id === b.id ? "selected" : ""}>${esc(b.title)} - ${esc(accession(b))}</option>`).join("")}</select></div>
-            <div class="field"><label>Damage Description</label><input name="description" placeholder="Describe the damage" required></div>
-            <div class="field"><label>Repair Status</label><select name="repairStatus">${["Minor Damage","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}">${s}</option>`).join("")}</select></div>
+            <div class="field"><label>Damage Note</label><input name="description" placeholder="Describe the damage" required></div>
+            <div class="field"><label>Damage Status</label><select name="repairStatus">${["Damaged","For Repair","Beyond Repair","Replaced"].map(s => `<option value="${s}">${s}</option>`).join("")}</select></div>
           </div>
           <div class="dialog-foot"><button class="secondary" type="button" data-close="viewModal">Cancel</button><button class="primary" type="submit">Report Damage</button></div>
         </form>
       </div>`;
       $("#viewModal").style.display = "flex";
-      $("#damageForm").onsubmit = (e) => {
+      $("#damageForm").onsubmit = async (e) => {
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.currentTarget));
-        upsertDamageRecord(data.bookId, data);
+        const saved = await upsertDamageRecord(data.bookId, data);
+        if (!saved) return;
         const damagedBook = books.find(b => b.id === data.bookId);
         if (damagedBook) addMovementHistory(damagedBook, damagedBook.location || "-", "Damage Review", "Damage Reported");
         closeModal("viewModal");
@@ -2176,25 +2221,40 @@ const demoUsers = [];
         </form>
       </div>`;
       $("#viewModal").style.display = "flex";
-      $("#damagePhotoForm").onsubmit = (e) => {
+      $("#damagePhotoForm").onsubmit = async (e) => {
         e.preventDefault();
-        upsertDamageRecord(book.id, Object.fromEntries(new FormData(e.currentTarget)));
+        const saved = await upsertDamageRecord(book.id, Object.fromEntries(new FormData(e.currentTarget)));
+        if (!saved) return;
         closeModal("viewModal");
         renderPage();
       };
     }
 
-    function setDamageStatus(book, repairStatus, movementAction) {
-      upsertDamageRecord(book.id, { repairStatus });
+    async function setDamageStatus(book, repairStatus, movementAction) {
+      const saved = await upsertDamageRecord(book.id, { repairStatus });
+      if (!saved) return;
       addMovementHistory(book, book.location || "-", repairStatus, movementAction);
       renderPage();
     }
 
     function archiveDamagedItem(book) {
-      systemConfirm(`Archive damaged record for "${book.title}"?`, () => {
+      systemConfirm(`Archive damaged record for "${book.title}"?`, async () => {
         const record = damagedRecord(book);
+        const nextBook = {
+          ...book,
+          status:"available",
+          availableCopies:Math.max(1, Number(book.availableCopies) || 0),
+          damageNote:"",
+          repairStatus:"",
+          lastUpdated:new Date().toISOString()
+        };
+        const response = await saveBookToAPI(nextBook, false);
+        if (!response.success) {
+          systemAlert(response.message || "Unable to archive damage record.");
+          return;
+        }
         damagedRecords = damagedRecords.map(d => d.bookId === book.id && !d.archived ? { ...d, archived:true } : d);
-        books = books.map(b => b.id === book.id ? { ...b, status:"available", lastUpdated:new Date().toISOString() } : b);
+        books = books.map(b => b.id === book.id ? nextBook : b);
         addMovementHistory(book, record.repairStatus || "Damaged", "Archived", "Archived Damaged Item");
         renderPage();
       }, "Archive Damage Record");
@@ -2697,7 +2757,7 @@ const demoUsers = [];
       }
       if (e.target.id === "searchVerification") {
         filters.search = e.target.value;
-        renderStockVerification();
+        renderPage();
         $("#searchVerification").focus();
         $("#searchVerification").setSelectionRange(filters.search.length, filters.search.length);
       }
@@ -2738,8 +2798,8 @@ const demoUsers = [];
       if (e.target.id === "barcodeCategoryFilter") { filters.category = e.target.value; renderBarcodeManagement(); }
       if (e.target.id === "assetStatusFilter") { filters.status = e.target.value; renderAssetTracking(); }
       if (e.target.id === "assetCategoryFilter") { filters.category = e.target.value; renderAssetTracking(); }
-      if (e.target.id === "verificationStatusFilter") { filters.status = e.target.value; renderStockVerification(); }
-      if (e.target.id === "verificationCategoryFilter") { filters.category = e.target.value; renderStockVerification(); }
+      if (e.target.id === "verificationStatusFilter") { filters.status = e.target.value; renderPage(); }
+      if (e.target.id === "verificationCategoryFilter") { filters.category = e.target.value; renderPage(); }
       if (e.target.id === "damageStatusFilter") { filters.status = e.target.value; renderDamagedItems(); }
       if (e.target.id === "damageCategoryFilter") { filters.category = e.target.value; renderDamagedItems(); }
       if (e.target.id === "notificationStatusFilter") { filters.status = e.target.value; renderNotifications(); }

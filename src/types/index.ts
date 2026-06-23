@@ -17,6 +17,8 @@ export interface Book {
   dueDate?: string;
   borrowDate?: string;
   accessionNumber?: string;
+  damageNote?: string;
+  repairStatus?: string;
   barcode?: string;
 }
 
