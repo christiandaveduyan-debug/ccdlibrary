@@ -22,7 +22,7 @@ function App() {
             </div>
             <div>
               <h1>City College of Davao Library</h1>
-              <p className="brand-tagline">Committed to Excellence</p>
+              <p className="brand-tagline">Dedicated to Excellence, Committed Service</p>
             </div>
           </div>
           <div className="login-panel">
