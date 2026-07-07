@@ -1531,10 +1531,10 @@ const demoUsers = [
       const selectedCount = selectedBookIds.size;
       const categories = [...new Set(books.map(b => b.category))].sort();
       const actionBar = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-        <button class="icon-btn book-action view" id="viewSelectedBook" title="View selected book" aria-label="View selected book" ${selectedCount === 1 ? "" : "disabled"}>${appIcon("book-open")}</button>
-        <button class="icon-btn book-action select" id="editSelectedBook" title="Edit selected book or show selection tools" aria-label="Edit selected book or show selection tools" ${selectedCount <= 1 ? "" : "disabled"}>${appIcon("select-list")}</button>
-        <button class="icon-btn book-action danger" id="deleteSelectedBooks" title="Delete selected book(s)" aria-label="Delete selected book(s)" ${selectedCount ? "" : "disabled"}>${appIcon("trash")}</button>
-        ${bookSelectionMode ? `<button class="icon-btn book-action exit" id="exitBookSelection" title="Exit selection mode" aria-label="Exit selection mode">${appIcon("x")}</button>` : ""}
+        <button class="book-action view" id="viewSelectedBook" title="View selected book" aria-label="View selected book" ${selectedCount === 1 ? "" : "disabled"}>${appIcon("book-open")}<span>View</span></button>
+        <button class="book-action select" id="editSelectedBook" title="Edit selected book or show selection tools" aria-label="Edit selected book or show selection tools" ${selectedCount <= 1 ? "" : "disabled"}>${appIcon("select-list")}<span>Edit</span></button>
+        <button class="book-action danger" id="deleteSelectedBooks" title="Delete selected book(s)" aria-label="Delete selected book(s)" ${selectedCount ? "" : "disabled"}>${appIcon("trash")}<span>Delete</span></button>
+        ${bookSelectionMode ? `<button class="book-action exit" id="exitBookSelection" title="Exit selection mode" aria-label="Exit selection mode">${appIcon("x")}<span>Exit</span></button>` : ""}
         <button class="primary" id="addBook">+ Add Book</button>
       </div>`;
       $("#main").innerHTML = pageHead("Books Catalog", "Manage your library's book collection", actionBar) + `
@@ -1559,7 +1559,7 @@ const demoUsers = [
             <td><strong>${b.availableCopies}</strong><span class="subtle">/${b.copies}</span></td>
           </tr>`).join("")}</tbody>
         </table>${rows.length ? "" : `<div class="empty">No books found matching your criteria.</div>`}</div>
-        <div class="count">Showing ${rows.length} of ${books.length} books${selectedCount ? ` • ${selectedCount} selected` : ""}</div>`;
+        <div class="count">Showing ${rows.length} of ${books.length} books${selectedCount ? ` | ${selectedCount} selected` : ""}</div>`;
       renderNav();
     }
 
