@@ -110,6 +110,36 @@ pub struct UpdateBookRequest {
 }
 
 #[derive(Deserialize)]
+pub struct ImportBooksRequest {
+    pub books: Vec<ImportBookRequest>,
+}
+
+#[derive(Deserialize)]
+pub struct ImportBookRequest {
+    pub title: String,
+    pub author: Option<String>,
+    pub category: Option<String>,
+    pub publisher: Option<String>,
+    pub isbn: Option<String>,
+    pub call_number: Option<String>,
+    pub status: Option<String>,
+    pub location: Option<String>,
+    pub published_year: Option<i32>,
+    pub copies: Option<i32>,
+    pub available_copies: Option<i32>,
+    pub accession_number: Option<String>,
+    pub damage_note: Option<String>,
+    pub repair_status: Option<String>,
+    pub barcode: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ImportBooksResponse {
+    pub added: i32,
+    pub updated: i32,
+}
+
+#[derive(Deserialize)]
 pub struct CreateMemberRequest {
     pub name: String,
     pub email: String,
@@ -450,6 +480,248 @@ pub async fn add_book(
                 Json(ApiResponse::<String> {
                     success: false,
                     message: "Failed to add book".to_string(),
+                    data: None,
+                }),
+            )
+        }
+    }
+}
+
+fn clean_optional(value: &Option<String>) -> Option<String> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && *value != "-")
+        .map(str::to_string)
+}
+
+fn import_status(value: &Option<String>) -> String {
+    match clean_optional(value)
+        .unwrap_or_else(|| "available".to_string())
+        .to_lowercase()
+        .as_str()
+    {
+        "lost" | "missing" => "missing".to_string(),
+        "unprocessed" | "available" | "borrowed" | "reserved" | "damaged" | "replaced" => {
+            clean_optional(value).unwrap_or_else(|| "available".to_string()).to_lowercase()
+        }
+        _ => "available".to_string(),
+    }
+}
+
+async fn ensure_author_id(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    name: Option<String>,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    let Some(name) = name else {
+        return Ok(None);
+    };
+
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO authors (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id",
+    )
+    .bind(name)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    Ok(Some(id))
+}
+
+async fn ensure_category_id(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    name: Option<String>,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    let Some(name) = name else {
+        return Ok(None);
+    };
+
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO categories (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id",
+    )
+    .bind(name)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    Ok(Some(id))
+}
+
+async fn ensure_publisher_id(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    name: Option<String>,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    let Some(name) = name else {
+        return Ok(None);
+    };
+
+    let id: Uuid = sqlx::query_scalar(
+        "INSERT INTO publishers (name)
+         VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id",
+    )
+    .bind(name)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    Ok(Some(id))
+}
+
+// POST - Bulk import books
+pub async fn import_books(
+    State(state): State<AppState>,
+    Json(payload): Json<ImportBooksRequest>,
+) -> impl IntoResponse {
+    if payload.books.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<ImportBooksResponse> {
+                success: false,
+                message: "No books were provided for import".to_string(),
+                data: None,
+            }),
+        );
+    }
+
+    let mut tx = match state.db.begin().await {
+        Ok(tx) => tx,
+        Err(err) => {
+            eprintln!("Database transaction error: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<ImportBooksResponse> {
+                    success: false,
+                    message: "Failed to start book import".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
+    let mut added = 0;
+    let mut updated = 0;
+
+    let result: Result<(), sqlx::Error> = async {
+        for book in payload.books {
+            let title = book.title.trim().to_string();
+            if title.is_empty() {
+                continue;
+            }
+
+            let author_id = ensure_author_id(&mut tx, clean_optional(&book.author)).await?;
+            let category_id = ensure_category_id(&mut tx, clean_optional(&book.category)).await?;
+            let publisher_id = ensure_publisher_id(&mut tx, clean_optional(&book.publisher)).await?;
+            let isbn = clean_optional(&book.isbn);
+            let accession_number = clean_optional(&book.accession_number);
+            let barcode = clean_optional(&book.barcode);
+            let copies = book.copies.unwrap_or(1).max(1);
+            let available_copies = book.available_copies.unwrap_or(copies).clamp(0, copies);
+            let status = import_status(&book.status);
+
+            let existing_id: Option<Uuid> = sqlx::query_scalar(
+                "SELECT id FROM books
+                 WHERE ($1::text IS NOT NULL AND accession_number = $1)
+                    OR ($2::text IS NOT NULL AND barcode = $2)
+                    OR ($3::text IS NOT NULL AND isbn = $3)
+                 LIMIT 1",
+            )
+            .bind(&accession_number)
+            .bind(&barcode)
+            .bind(&isbn)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+            if let Some(book_id) = existing_id {
+                sqlx::query(
+                    "UPDATE books SET
+                        title = $2,
+                        author_id = $3,
+                        category_id = $4,
+                        publisher_id = $5,
+                        isbn = $6,
+                        call_number = $7,
+                        status = $8,
+                        location = $9,
+                        published_year = $10,
+                        copies = $11,
+                        available_copies = $12,
+                        accession_number = $13,
+                        damage_note = $14,
+                        repair_status = $15,
+                        barcode = $16
+                     WHERE id = $1",
+                )
+                .bind(book_id)
+                .bind(&title)
+                .bind(author_id)
+                .bind(category_id)
+                .bind(publisher_id)
+                .bind(&isbn)
+                .bind(clean_optional(&book.call_number))
+                .bind(&status)
+                .bind(clean_optional(&book.location))
+                .bind(book.published_year)
+                .bind(copies)
+                .bind(available_copies)
+                .bind(&accession_number)
+                .bind(clean_optional(&book.damage_note))
+                .bind(clean_optional(&book.repair_status))
+                .bind(&barcode)
+                .execute(&mut *tx)
+                .await?;
+                updated += 1;
+            } else {
+                sqlx::query(
+                    "INSERT INTO books (id, title, author_id, category_id, publisher_id, isbn, call_number, status, location, published_year, copies, available_copies, accession_number, damage_note, repair_status, barcode)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
+                )
+                .bind(Uuid::new_v4())
+                .bind(&title)
+                .bind(author_id)
+                .bind(category_id)
+                .bind(publisher_id)
+                .bind(&isbn)
+                .bind(clean_optional(&book.call_number))
+                .bind(&status)
+                .bind(clean_optional(&book.location))
+                .bind(book.published_year)
+                .bind(copies)
+                .bind(available_copies)
+                .bind(&accession_number)
+                .bind(clean_optional(&book.damage_note))
+                .bind(clean_optional(&book.repair_status))
+                .bind(&barcode)
+                .execute(&mut *tx)
+                .await?;
+                added += 1;
+            }
+        }
+
+        tx.commit().await
+    }
+    .await;
+
+    match result {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(ApiResponse {
+                success: true,
+                message: "Books imported successfully".to_string(),
+                data: Some(ImportBooksResponse { added, updated }),
+            }),
+        ),
+        Err(err) => {
+            eprintln!("Book import error: {}", err);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<ImportBooksResponse> {
+                    success: false,
+                    message: "Failed to import books".to_string(),
                     data: None,
                 }),
             )

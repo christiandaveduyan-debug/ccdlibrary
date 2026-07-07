@@ -23,6 +23,7 @@ use crate::api::library::{
     get_categories,
     get_members,
     get_publishers,
+    import_books,
     return_book,
     update_author,
     update_book,
@@ -64,6 +65,7 @@ pub fn auth_routes() -> Router<AppState> {
         .route("/api/users/{id}", put(update_user).delete(delete_user))
         // Book routes
         .route("/api/books", get(get_books).post(add_book))
+        .route("/api/books/import", post(import_books))
         .route("/api/books/{id}", put(update_book).delete(delete_book))
         // Member routes
         .route("/api/members", get(get_members).post(add_member))

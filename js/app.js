@@ -2545,16 +2545,30 @@ const demoUsers = [];
     }
 
     async function importInventoryRows(rows) {
-      let added = 0;
-      let updated = 0;
       const now = new Date().toISOString();
+      const usedAccessions = new Set(books.map(book => String(book.accessionNumber || "").toLowerCase()).filter(Boolean));
+      let nextAccessionIndex = books.length + 1;
+
+      const makeImportAccession = () => {
+        let candidate = "";
+        do {
+          candidate = `ACC-${String(nextAccessionIndex).padStart(4, "0")}`;
+          nextAccessionIndex += 1;
+        } while (usedAccessions.has(candidate.toLowerCase()));
+        usedAccessions.add(candidate.toLowerCase());
+        return candidate;
+      };
+
+      const payloadBooks = [];
 
       for (const row of rows) {
         const title = cleanImportValue(row.booktitle || row.title);
         if (!title) continue;
 
         const barcode = cleanImportValue(row.barcode);
-        const accessionNumber = cleanImportValue(row.accessionnumber || row.accession) || nextAccessionNumber();
+        const providedAccession = cleanImportValue(row.accessionnumber || row.accession);
+        const accessionNumber = providedAccession || makeImportAccession();
+        usedAccessions.add(accessionNumber.toLowerCase());
         const isbn = cleanImportValue(row.isbn);
         const copies = Math.max(1, Number(row.quantity || row.copies || 1) || 1);
         const availableCopies = Math.max(0, Number(row.availablecopies || row.available || copies) || 0);
@@ -2580,31 +2594,32 @@ const demoUsers = [];
           lastUpdated: now
         };
 
-        const existingIndex = books.findIndex(book =>
-          (accessionNumber && accession(book).toLowerCase() === accessionNumber.toLowerCase()) ||
-          (barcode && String(book.barcode || "").toLowerCase() === barcode.toLowerCase()) ||
-          (isbn && String(book.isbn || "").toLowerCase() === isbn.toLowerCase())
-        );
-
-        if (existingIndex >= 0) {
-          const nextBook = { ...books[existingIndex], ...importedBook };
-          const response = await saveBookToAPI(nextBook, false);
-          if (!response.success) throw new Error(response.message || `Unable to update "${title}".`);
-          books[existingIndex] = nextBook;
-          updated += 1;
-        } else {
-          const nextBook = {
-            id: id(),
-            ...importedBook,
-            accessionNumber
-          };
-          const response = await saveBookToAPI(nextBook, true);
-          if (!response.success) throw new Error(response.message || `Unable to import "${title}".`);
-          nextBook.id = response.data || nextBook.id;
-          books.push(nextBook);
-          added += 1;
-        }
+        payloadBooks.push({
+          title: importedBook.title,
+          author: importedBook.author,
+          category: importedBook.category,
+          publisher: importedBook.publisher,
+          isbn: importedBook.isbn || null,
+          call_number: importedBook.callNumber || null,
+          status: importedBook.status,
+          location: importedBook.location || null,
+          published_year: importedBook.publishedYear,
+          copies: importedBook.copies,
+          available_copies: importedBook.availableCopies,
+          accession_number: importedBook.accessionNumber || null,
+          damage_note: importedBook.damageNote || null,
+          repair_status: importedBook.repairStatus || null,
+          barcode: importedBook.barcode || null
+        });
       }
+
+      if (!payloadBooks.length) return { added:0, updated:0 };
+
+      const response = await apiPost("/api/books/import", { books:payloadBooks });
+      if (!response.success) throw new Error(response.message || "Unable to import inventory file.");
+
+      const added = Number(response.data?.added || 0);
+      const updated = Number(response.data?.updated || 0);
 
       if (added || updated) {
         activities.unshift({
