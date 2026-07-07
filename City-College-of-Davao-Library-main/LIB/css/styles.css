@@ -476,6 +476,7 @@
       background: transparent;
       color: #64748b;
     }
+    .icon-btn svg { width: 17px; height: 17px; }
     .icon-btn:hover { background: #f1f5f9; color: #334155; }
     .permission-table { min-width: 620px; }
     .permission-table th:not(:first-child), .permission-table td:not(:first-child) { text-align: center; }
