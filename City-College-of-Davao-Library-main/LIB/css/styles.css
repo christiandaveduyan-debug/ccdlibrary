@@ -478,6 +478,32 @@
     }
     .icon-btn svg { width: 17px; height: 17px; }
     .icon-btn:hover { background: #f1f5f9; color: #334155; }
+    .book-action {
+      width: 34px;
+      min-width: 34px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .book-action.view { color: #0369a1; }
+    .book-action.select { color: var(--green-mid); }
+    .book-action.danger { color: var(--red); }
+    .book-action.exit { color: #475569; }
+    .book-action:hover { border-color: rgba(21,128,61,.32); background: var(--green-soft); }
+    .book-action.danger:hover { border-color: rgba(220,38,38,.28); background: #fee2e2; color: #b91c1c; }
+    .book-check-label {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      font-weight: 800;
+      color: var(--green-deep);
+    }
+    .book-check {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: var(--green-mid);
+      cursor: pointer;
+    }
     .permission-table { min-width: 620px; }
     .permission-table th:not(:first-child), .permission-table td:not(:first-child) { text-align: center; }
     .check-cell {

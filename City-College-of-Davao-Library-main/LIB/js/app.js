@@ -245,8 +245,11 @@ const demoUsers = [
         search: `<circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path>`,
         tag: `<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"></path><circle cx="7.5" cy="7.5" r=".5"></circle>`,
         edit: `<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`,
+        "book-open": `<path d="M12 7v14"></path><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v18H5.5A2.5 2.5 0 0 1 3 18.5z"></path><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v18h6.5a2.5 2.5 0 0 0 2.5-2.5z"></path>`,
+        "select-list": `<rect x="3" y="4" width="5" height="5" rx="1"></rect><path d="m4.2 6.5 1.1 1.1 1.8-2"></path><path d="M11 6.5h10"></path><rect x="3" y="15" width="5" height="5" rx="1"></rect><path d="M11 17.5h10"></path>`,
         eye: `<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle>`,
         trash: `<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>`,
+        x: `<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>`,
         info: `<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>`,
         help: `<circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 1 1 5.8 1c-.8 1.4-2.9 1.6-2.9 3"></path><path d="M12 17h.01"></path>`,
         file: `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h5"></path>`,
@@ -1528,9 +1531,10 @@ const demoUsers = [
       const selectedCount = selectedBookIds.size;
       const categories = [...new Set(books.map(b => b.category))].sort();
       const actionBar = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-        <button class="icon-btn" id="viewSelectedBook" title="View selected book" aria-label="View selected book" ${selectedCount === 1 ? "" : "disabled"}>${appIcon("eye")}</button>
-        <button class="icon-btn" id="editSelectedBook" title="Edit selected book or show selection tools" aria-label="Edit selected book or show selection tools" ${selectedCount <= 1 ? "" : "disabled"}>${appIcon("edit")}</button>
-        <button class="icon-btn" id="deleteSelectedBooks" title="Delete selected book(s)" aria-label="Delete selected book(s)" ${selectedCount ? "" : "disabled"}>${appIcon("trash")}</button>
+        <button class="icon-btn book-action view" id="viewSelectedBook" title="View selected book" aria-label="View selected book" ${selectedCount === 1 ? "" : "disabled"}>${appIcon("book-open")}</button>
+        <button class="icon-btn book-action select" id="editSelectedBook" title="Edit selected book or show selection tools" aria-label="Edit selected book or show selection tools" ${selectedCount <= 1 ? "" : "disabled"}>${appIcon("select-list")}</button>
+        <button class="icon-btn book-action danger" id="deleteSelectedBooks" title="Delete selected book(s)" aria-label="Delete selected book(s)" ${selectedCount ? "" : "disabled"}>${appIcon("trash")}</button>
+        ${bookSelectionMode ? `<button class="icon-btn book-action exit" id="exitBookSelection" title="Exit selection mode" aria-label="Exit selection mode">${appIcon("x")}</button>` : ""}
         <button class="primary" id="addBook">+ Add Book</button>
       </div>`;
       $("#main").innerHTML = pageHead("Books Catalog", "Manage your library's book collection", actionBar) + `
@@ -1542,13 +1546,13 @@ const demoUsers = [
           <select id="categoryFilter"><option value="">All Categories</option>${categories.map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
         </div>
         ${bookSelectionMode ? `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
-          <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input id="selectVisibleBooks" type="checkbox" ${allVisibleSelected ? "checked" : ""} ${rows.length ? "" : "disabled"}> Select all visible books</label>
+          <label class="book-check-label"><input class="book-check" id="selectVisibleBooks" type="checkbox" ${allVisibleSelected ? "checked" : ""} ${rows.length ? "" : "disabled"}> Select all visible books</label>
           ${selectedCount ? `<button class="secondary" id="clearBookSelection">Clear selection</button>` : ""}
         </div>` : ""}</div>
         <div class="card table-wrap"><table>
           <thead><tr>${bookSelectionMode ? `<th style="width:44px">Select</th>` : ""}<th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Status</th><th>Copies</th></tr></thead>
           <tbody>${rows.map(b => `<tr data-book-row="${b.id}" style="cursor:pointer;${selectedBookIds.has(b.id) ? "background:#eff6ff" : ""}">
-            ${bookSelectionMode ? `<td><input type="checkbox" data-select-book="${b.id}" ${selectedBookIds.has(b.id) ? "checked" : ""}></td>` : ""}
+            ${bookSelectionMode ? `<td><input class="book-check" type="checkbox" data-select-book="${b.id}" ${selectedBookIds.has(b.id) ? "checked" : ""}></td>` : ""}
             <td><strong>${esc(b.title)}</strong><p class="subtle mono" style="font-size:12px">${esc(b.callNumber)}</p></td>
             <td>${esc(b.author)}</td><td class="mono">${esc(b.isbn)}</td><td>${esc(b.category)}</td>
             <td><span class="pill" style="${statusClass(b.status)}">${esc(statusLabel(b.status))}</span></td>
@@ -2801,6 +2805,11 @@ const demoUsers = [
       if (t.id === "addUser") openUserForm();
       if (t.id === "savePermissions") savePermissions();
       if (t.id === "clearBookSelection") {
+        selectedBookIds.clear();
+        renderBooks();
+      }
+      if (t.id === "exitBookSelection") {
+        bookSelectionMode = false;
         selectedBookIds.clear();
         renderBooks();
       }
