@@ -14,6 +14,7 @@ use crate::api::library::{
     borrow_book,
     delete_author,
     delete_book,
+    delete_books,
     delete_category,
     delete_member,
     delete_publisher,
@@ -64,7 +65,7 @@ pub fn auth_routes() -> Router<AppState> {
         .route("/api/users", get(get_users))
         .route("/api/users/{id}", put(update_user).delete(delete_user))
         // Book routes
-        .route("/api/books", get(get_books).post(add_book))
+        .route("/api/books", get(get_books).post(add_book).delete(delete_books))
         .route("/api/books/import", post(import_books))
         .route("/api/books/{id}", put(update_book).delete(delete_book))
         // Member routes

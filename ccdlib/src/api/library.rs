@@ -140,6 +140,16 @@ pub struct ImportBooksResponse {
 }
 
 #[derive(Deserialize)]
+pub struct DeleteBooksRequest {
+    pub ids: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct DeleteBooksResponse {
+    pub deleted: u64,
+}
+
+#[derive(Deserialize)]
 pub struct CreateMemberRequest {
     pub name: String,
     pub email: String,
@@ -797,6 +807,72 @@ pub async fn update_book(
 }
 
 // DELETE - Delete book
+pub async fn delete_books(
+    State(state): State<AppState>,
+    Json(payload): Json<DeleteBooksRequest>,
+) -> impl IntoResponse {
+    let ids: Result<Vec<Uuid>, _> = payload
+        .ids
+        .into_iter()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty())
+        .map(|id| Uuid::parse_str(&id))
+        .collect();
+    let ids = match ids {
+        Ok(ids) => ids,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::<DeleteBooksResponse> {
+                    success: false,
+                    message: "One or more selected book IDs are invalid".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
+    if ids.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<DeleteBooksResponse> {
+                success: false,
+                message: "No books were selected for deletion".to_string(),
+                data: None,
+            }),
+        );
+    }
+
+    let result = sqlx::query("DELETE FROM books WHERE id = ANY($1::uuid[])")
+        .bind(&ids)
+        .execute(&state.db)
+        .await;
+
+    match result {
+        Ok(done) => (
+            StatusCode::OK,
+            Json(ApiResponse {
+                success: true,
+                message: "Selected books deleted successfully".to_string(),
+                data: Some(DeleteBooksResponse {
+                    deleted: done.rows_affected(),
+                }),
+            }),
+        ),
+        Err(err) => {
+            eprintln!("Database error: {}", err);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<DeleteBooksResponse> {
+                    success: false,
+                    message: "Failed to delete selected books".to_string(),
+                    data: None,
+                }),
+            )
+        }
+    }
+}
+
 pub async fn delete_book(
     State(state): State<AppState>,
     Path(book_id): Path<String>,

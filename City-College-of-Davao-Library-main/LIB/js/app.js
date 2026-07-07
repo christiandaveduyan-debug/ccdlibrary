@@ -81,6 +81,7 @@ const demoUsers = [
     ];
     let currentUser = null;
     let currentPage = "dashboard";
+    let selectedBookIds = new Set();
     let expanded = new Set(["books"]);
     let filters = { search: "", status: "all", category: "" };
     let borrowSelection = { memberId:"M001", bookId:"1" };
@@ -650,6 +651,20 @@ const demoUsers = [
       }
     }
 
+    async function apiDeleteWithBody(endpoint, data) {
+      try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        return await response.json();
+      } catch (error) {
+        console.error("API error:", error);
+        return { success: false, message: error.message };
+      }
+    }
+
     async function ensureCatalogEntry(type, name) {
       const cleanName = String(name || "").trim();
       if (!cleanName) return null;
@@ -701,6 +716,10 @@ const demoUsers = [
     // Delete book from Supabase
     async function deleteBookFromAPI(bookId) {
       return await apiDelete(`/api/books/${bookId}`);
+    }
+
+    async function deleteSelectedBooksFromAPI(bookIds) {
+      return await apiDeleteWithBody("/api/books", { ids:bookIds });
     }
 
     // Save category to Supabase
@@ -1500,18 +1519,26 @@ const demoUsers = [
 
     function renderBooks() {
       const rows = filteredBooks();
+      selectedBookIds = new Set([...selectedBookIds].filter(bookId => books.some(book => book.id === bookId)));
+      const selectedVisibleCount = rows.filter(book => selectedBookIds.has(book.id)).length;
+      const allVisibleSelected = rows.length > 0 && selectedVisibleCount === rows.length;
       const categories = [...new Set(books.map(b => b.category))].sort();
-      $("#main").innerHTML = pageHead("Books Catalog", "Manage your library's book collection", `<button class="primary" id="addBook">+ Add Book</button>`) + `
+      $("#main").innerHTML = pageHead("Books Catalog", "Manage your library's book collection", `<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" id="deleteSelectedBooks" ${selectedBookIds.size ? "" : "disabled"}>Delete selected (${selectedBookIds.size})</button><button class="primary" id="addBook">+ Add Book</button></div>`) + `
         <div class="card filters"><div class="filter-row">
           <input id="searchBooks" placeholder="Search by title, author, or ISBN..." value="${esc(filters.search)}">
           <select id="statusFilter">
             ${["all","available","borrowed","reserved","missing","damaged"].map(s => `<option value="${s}" ${filters.status === s ? "selected" : ""}>${s === "all" ? "All Status" : s[0].toUpperCase() + s.slice(1)}</option>`).join("")}
           </select>
           <select id="categoryFilter"><option value="">All Categories</option>${categories.map(c => `<option ${filters.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
+          <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input id="selectVisibleBooks" type="checkbox" ${allVisibleSelected ? "checked" : ""} ${rows.length ? "" : "disabled"}> Select all visible books</label>
+          ${selectedBookIds.size ? `<button class="secondary" id="clearBookSelection">Clear selection</button>` : ""}
         </div></div>
         <div class="card table-wrap"><table>
-          <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Status</th><th>Copies</th><th style="text-align:right">Actions</th></tr></thead>
+          <thead><tr><th style="width:44px">Select</th><th>Title</th><th>Author</th><th>ISBN</th><th>Category</th><th>Status</th><th>Copies</th><th style="text-align:right">Actions</th></tr></thead>
           <tbody>${rows.map(b => `<tr>
+            <td><input type="checkbox" data-select-book="${b.id}" ${selectedBookIds.has(b.id) ? "checked" : ""}></td>
             <td><strong>${esc(b.title)}</strong><p class="subtle mono" style="font-size:12px">${esc(b.callNumber)}</p></td>
             <td>${esc(b.author)}</td><td class="mono">${esc(b.isbn)}</td><td>${esc(b.category)}</td>
             <td><span class="pill" style="${statusClass(b.status)}">${esc(statusLabel(b.status))}</span></td>
@@ -1519,7 +1546,7 @@ const demoUsers = [
             <td><div class="actions"><button class="icon-btn" title="View details" data-view="${b.id}">View</button><button class="icon-btn" title="Edit" data-edit="${b.id}">Edit</button><button class="icon-btn" title="Delete" data-delete="${b.id}">Del</button></div></td>
           </tr>`).join("")}</tbody>
         </table>${rows.length ? "" : `<div class="empty">No books found matching your criteria.</div>`}</div>
-        <div class="count">Showing ${rows.length} of ${books.length} books</div>`;
+        <div class="count">Showing ${rows.length} of ${books.length} books${selectedBookIds.size ? ` • ${selectedBookIds.size} selected` : ""}</div>`;
       renderNav();
     }
 
@@ -2751,6 +2778,31 @@ const demoUsers = [
       if (t.id === "addBook" || t.id === "addItem") openBookForm();
       if (t.id === "addUser") openUserForm();
       if (t.id === "savePermissions") savePermissions();
+      if (t.id === "clearBookSelection") {
+        selectedBookIds.clear();
+        renderBooks();
+      }
+      if (t.id === "deleteSelectedBooks") {
+        const ids = [...selectedBookIds];
+        if (!ids.length) return;
+        systemConfirm(`Delete ${ids.length} selected book${ids.length === 1 ? "" : "s"}? This cannot be undone.`, async () => {
+          try {
+            const response = await deleteSelectedBooksFromAPI(ids);
+            if (!response.success) throw new Error(response.message || "Unable to delete selected books.");
+            const deleted = Number(response.data?.deleted || ids.length);
+            selectedBookIds.clear();
+            activities.unshift({ id:id(), type:"delete", description:`Deleted ${deleted} selected book${deleted === 1 ? "" : "s"}`, user:currentUser.name, timestamp:new Date().toISOString() });
+            await loadAppData();
+            renderPage();
+          } catch (error) {
+            systemDialog({
+              title:"Unable to Delete",
+              message:error.message || "The database rejected this change.",
+              confirmText:"OK"
+            });
+          }
+        }, "Delete Selected Books");
+      }
       if (t.id === "importInventoryExcel") $("#inventoryImportFile")?.click();
       if (t.id === "exportInventoryExcel") exportInventoryExcel();
       if (t.dataset.catalogAdd) openCatalogForm(t.dataset.catalogAdd);
@@ -2818,6 +2870,7 @@ const demoUsers = [
               const response = await deleteBookFromAPI(book.id);
               if (!response.success) throw new Error(response.message || "Unable to delete book.");
               books = books.filter(b => b.id !== book.id);
+              selectedBookIds.delete(book.id);
               activities.unshift({ id:id(), type:"delete", description:`Deleted book "${book.title}"`, user:currentUser.name, timestamp:new Date().toISOString() });
               await loadAppData();
               renderPage();
@@ -2924,6 +2977,18 @@ const demoUsers = [
       if (e.target.id === "categoryFilter") { filters.category = e.target.value; renderBooks(); }
       if (e.target.id === "inventoryStatusFilter") { filters.status = e.target.value; renderInventory(); }
       if (e.target.id === "inventoryCategoryFilter") { filters.category = e.target.value; renderInventory(); }
+      if (e.target.id === "selectVisibleBooks") {
+        filteredBooks().forEach(book => {
+          if (e.target.checked) selectedBookIds.add(book.id);
+          else selectedBookIds.delete(book.id);
+        });
+        renderBooks();
+      }
+      if (e.target.dataset.selectBook) {
+        if (e.target.checked) selectedBookIds.add(e.target.dataset.selectBook);
+        else selectedBookIds.delete(e.target.dataset.selectBook);
+        renderBooks();
+      }
       if (e.target.id === "barcodeStatusFilter") { filters.status = e.target.value; renderBarcodeManagement(); }
       if (e.target.id === "barcodeCategoryFilter") { filters.category = e.target.value; renderBarcodeManagement(); }
       if (e.target.id === "assetStatusFilter") { filters.status = e.target.value; renderAssetTracking(); }
