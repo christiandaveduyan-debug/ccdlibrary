@@ -1,5 +1,8 @@
 const demoUsers = [];
     const API_BASE_URL = (import.meta.env.VITE_API_URL || "https://ccdlib-backend.onrender.com").replace(/\/+$/, "");
+    const AUTH_TOKEN_KEY = "authToken";
+    const SESSION_USER_KEY = "ccdLibraryCurrentUser";
+    const SESSION_PAGE_KEY = "ccdLibraryCurrentPage";
     function persistUsers() {
       // Users are persisted by the backend only.
     }
@@ -295,15 +298,57 @@ const demoUsers = [];
       return existing || user;
     }
 
-    async function completeLogin(user) {
+    function isPageAllowed(pageId, user = currentUser) {
+      if (!pages[pageId] || !user) return false;
+      return menuItems.some(item =>
+        item.roles.includes(user.role) &&
+        (item.id === pageId || (item.children || []).some(child => child[0] === pageId))
+      );
+    }
+
+    function saveSession(user = currentUser) {
+      if (!user) return;
+      localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+      localStorage.setItem(SESSION_PAGE_KEY, currentPage);
+    }
+
+    function savedPageFor(user) {
+      const savedPage = localStorage.getItem(SESSION_PAGE_KEY) || "dashboard";
+      return isPageAllowed(savedPage, user) ? savedPage : "dashboard";
+    }
+
+    async function completeLogin(user, page = "dashboard", showTransition = true) {
       currentUser = user;
-      currentPage = "dashboard";
-      await showLoginTransition(async () => {
+      currentPage = isPageAllowed(page, user) ? page : "dashboard";
+      const finishLogin = async () => {
         $("#login").style.display = "none";
         $("#app").classList.add("logged");
         await loadAppData();
+        saveSession(user);
         renderShell();
-      });
+      };
+      if (showTransition) await showLoginTransition(finishLogin);
+      else await finishLogin();
+    }
+
+    async function restoreSession() {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const savedUser = localStorage.getItem(SESSION_USER_KEY);
+      if (!token || !savedUser) return;
+
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        const user = syncUser({
+          ...parsedUser,
+          role:["admin", "librarian", "member"].includes(parsedUser.role) ? parsedUser.role : "librarian",
+          status:["active", "inactive", "suspended", "pending"].includes(parsedUser.status) ? parsedUser.status : "active"
+        });
+        await completeLogin(user, savedPageFor(user), false);
+      } catch (error) {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(SESSION_USER_KEY);
+        localStorage.removeItem(SESSION_PAGE_KEY);
+      }
     }
 
     async function login(email, password) {
@@ -313,7 +358,7 @@ const demoUsers = [];
       try {
         const response = await apiRequest("/api/login", { email:cleanEmail, password });
         const apiUser = response?.user || response;
-        localStorage.setItem("authToken", response?.token || "");
+        localStorage.setItem(AUTH_TOKEN_KEY, response?.token || "");
         await completeLogin(syncUser(normalizeApiUser(apiUser, { email:cleanEmail })));
       } catch (error) {
         showLoginError(error.message || "Invalid email or password. Please try again.");
@@ -355,6 +400,9 @@ const demoUsers = [];
 
     function logout() {
       currentUser = null;
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(SESSION_USER_KEY);
+      localStorage.removeItem(SESSION_PAGE_KEY);
       $("#loginTransition")?.classList.remove("active");
       $("#loginTransition")?.setAttribute("aria-hidden", "true");
       $("#app").classList.remove("logged");
@@ -614,6 +662,7 @@ const demoUsers = [];
     }
 
     function renderShell() {
+      saveSession();
       $("#userName").textContent = currentUser.name;
       $("#avatar").textContent = currentUser.name[0].toUpperCase();
       const roleBadge = $("#roleBadge");
@@ -2715,6 +2764,7 @@ const demoUsers = [];
       if (t.dataset.page) {
         if (t.dataset.page !== currentPage) filters.status = "all";
         currentPage = t.dataset.page;
+        saveSession();
         renderPage();
       }
       if (t.dataset.toggle) {
@@ -2961,3 +3011,4 @@ const demoUsers = [];
     document.querySelectorAll("[data-toggle-password]").forEach(button => {
       button.innerHTML = passwordToggleIcon(false);
     });
+    restoreSession();
