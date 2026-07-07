@@ -280,6 +280,15 @@ const demoUsers = [
       lost: "background:#fee2e2;color:#b91c1c",
       damaged: "background:#ffedd5;color:#c2410c"
     }[status] || "background:#f1f5f9;color:#475569");
+    const titleSorter = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: "base",
+      ignorePunctuation: true
+    });
+    const sortBooksByTitle = (rows) => rows.sort((a, b) =>
+      titleSorter.compare(String(a.title || ""), String(b.title || "")) ||
+      titleSorter.compare(String(accession(a) || ""), String(accession(b) || ""))
+    );
     const damageStatusStyle = (status) => ({
       "Damaged": "background:#ffedd5;color:#c2410c",
       "For Repair": "background:#e0f2fe;color:#0369a1",
@@ -1360,7 +1369,7 @@ const demoUsers = [
     }
 
     function filteredBooks() {
-      return books.filter(b => {
+      return sortBooksByTitle(books.filter(b => {
         const damage = damagedRecord(b);
         const text = `${b.title} ${b.author} ${b.isbn} ${b.barcode || ""} ${accession(b)} ${b.location || ""} ${b.borrower || ""} ${damage.description || ""}`.toLowerCase();
         const effectiveStatus = inventoryStatus(b.status);
@@ -1369,7 +1378,7 @@ const demoUsers = [
         return (!filters.search || text.includes(filters.search.toLowerCase())) &&
           (barcodeMode || damagedMode || filters.status === "all" || b.status === filters.status || effectiveStatus === filters.status) &&
           (!filters.category || b.category === filters.category);
-      });
+      }));
     }
 
     function reportActions() {

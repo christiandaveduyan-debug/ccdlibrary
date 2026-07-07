@@ -222,7 +222,8 @@ pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
          FROM books b
          LEFT JOIN authors a ON b.author_id = a.id
          LEFT JOIN categories c ON b.category_id = c.id
-         LEFT JOIN publishers p ON b.publisher_id = p.id"
+         LEFT JOIN publishers p ON b.publisher_id = p.id
+         ORDER BY lower(b.title) COLLATE \"C\" ASC, b.accession_number ASC NULLS LAST"
     )
         .fetch_all(&state.db)
         .await;
